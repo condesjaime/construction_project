@@ -1,0 +1,1 @@
+A single web application containing two modules: a Project Work Scheduling Tool and a Site Diary. Both live within the same app and share the same underlying data — most importantly, the diary references tasks defined in the scheduling tool.
