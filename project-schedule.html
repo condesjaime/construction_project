@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<title> · Westmead Office Refurbishment · Schedule</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --surface-alt: #FAF8F3;
+    --border: #E7E3D9;
+    --border-strong: #D6D1C3;
+    --text: #1A1A1F;
+    --text-muted: #6B6960;
+    --text-faint: #9C998E;
+    --accent: #C2410C;
+    --today: #DC2626;
+    --weekend-tint: #F2EFE7;
+
+    /* Project (Westmead = terracotta) */
+    --p: #B4633E;
+    --p-dark: #8B4A2D;
+    --p-soft: #F0E0D4;
+    --p-tint: #FBF5F0;
+
+    /* Statuses */
+    --st-done: #16A34A;
+    --st-done-soft: #DCFCE7;
+    --st-progress: #D97706;
+    --st-progress-soft: #FEF3C7;
+    --st-planned: #94A3B8;
+    --st-planned-soft: #F1F5F9;
+
+    --day-w: 30px;
+    --label-w: 360px;
+    --week-h: 28px;
+    --day-h: 28px;
+    --row-h: 64px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ===== Top bar ===== */
+  .app { min-height: 100vh; display: flex; flex-direction: column; }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 28px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .brand { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 16px; letter-spacing: -0.01em; }
+  .brand-mark { width: 26px; height: 26px; border-radius: 7px; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
+  .breadcrumb { color: var(--text-faint); font-weight: 400; display: flex; align-items: center; gap: 8px; max-width: 50ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .breadcrumb-sep { opacity: 0.5; }
+  .breadcrumb-current { color: var(--text); font-weight: 500; }
+  .topbar-right { display: flex; align-items: center; gap: 16px; font-size: 13px; color: var(--text-muted); }
+  .proto-pill { background: #FEF3C7; color: #92400E; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+
+  /* ===== Project header card ===== */
+  .project-card {
+    padding: 22px 28px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  .project-card::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+    background: var(--p);
+  }
+  .back-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--text-muted);
+    text-decoration: none;
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+  .back-link:hover { color: var(--text); }
+  .back-link svg { width: 12px; height: 12px; }
+  .project-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+  .project-title {
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    margin: 0;
+    line-height: 1.1;
+  }
+  .project-meta-row {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .meta-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--text-muted);
+    padding: 3px 10px;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-weight: 500;
+  }
+  .meta-chip.code {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--p-dark);
+    background: var(--p-tint);
+    border-color: var(--p-soft);
+  }
+  .meta-chip svg { width: 12px; height: 12px; }
+
+  .project-stats-row {
+    display: flex; align-items: center; gap: 14px;
+    margin-top: 18px;
+    font-size: 13px;
+  }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 4px 11px 4px 9px;
+    background: var(--st-progress-soft);
+    color: #92400E;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 12px;
+  }
+  .status-pill .pulse {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--st-progress);
+    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.18);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.18); }
+    50% { box-shadow: 0 0 0 5px rgba(217, 119, 6, 0.08); }
+  }
+  .day-info {
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+  .day-info strong { color: var(--text); font-weight: 600; }
+  .progress-bar {
+    flex: 1;
+    height: 8px;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    position: relative;
+    overflow: hidden;
+    max-width: 480px;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--p) 0%, var(--p-dark) 100%);
+    border-radius: 999px;
+    transition: width 0.6s ease;
+  }
+  .progress-pct {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    min-width: 38px;
+    text-align: right;
+  }
+
+  /* ===== Toolbar ===== */
+  .toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 28px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    gap: 24px;
+  }
+  .toolbar-left { font-size: 13px; color: var(--text-muted); }
+  .toolbar-controls { display: flex; align-items: center; gap: 12px; }
+  .view-toggle {
+    display: flex;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 3px;
+  }
+  .view-toggle button {
+    border: 0;
+    background: transparent;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text-muted);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .view-toggle button.active {
+    background: white;
+    color: var(--text);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  }
+  .view-toggle button:not(.active):hover { color: var(--text); }
+  .view-toggle button:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn {
+    border: 1px solid var(--border-strong);
+    background: white;
+    padding: 7px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--text);
+    border-radius: 7px;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: all 0.15s;
+  }
+  .btn:hover { background: var(--surface-alt); }
+  .btn-primary { background: var(--p); color: white; border-color: var(--p); }
+  .btn-primary:hover { background: var(--p-dark); border-color: var(--p-dark); }
+  .btn-icon { padding: 7px 9px; }
+  .btn svg { width: 14px; height: 14px; }
+  .date-nav { display: flex; align-items: center; gap: 4px; }
+  .date-range {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 0 10px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ===== Gantt ===== */
+  .gantt-wrap {
+    flex: 1;
+    overflow: auto;
+    background: var(--surface);
+    position: relative;
+  }
+  .gantt {
+    position: relative;
+    min-width: max-content;
+  }
+
+  .gantt-header {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .header-label-cell {
+    width: var(--label-w);
+    min-width: var(--label-w);
+    padding: 0 18px;
+    display: flex; align-items: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: var(--surface);
+    border-right: 1px solid var(--border-strong);
+    position: sticky;
+    left: 0;
+    z-index: 31;
+    height: calc(var(--week-h) + var(--day-h));
+  }
+  .timeline-headers { display: flex; flex-direction: column; }
+  .week-row, .day-row { display: flex; }
+  .week-row { height: var(--week-h); }
+  .day-row { height: var(--day-h); border-top: 1px solid var(--border); }
+  .week-cell {
+    border-right: 1px solid var(--border-strong);
+    padding: 6px 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+    background: var(--surface);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .day-cell {
+    width: var(--day-w);
+    min-width: var(--day-w);
+    border-right: 1px solid var(--border);
+    text-align: center;
+    font-size: 10px;
+    color: var(--text-faint);
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: var(--surface);
+    line-height: 1.1;
+  }
+  .day-cell.weekend { background: var(--weekend-tint); color: var(--text-faint); }
+  .day-cell .dnum { font-weight: 600; color: var(--text-muted); font-size: 11px; }
+  .day-cell.today .dnum { color: var(--today); }
+  .day-cell.today { background: #FFF1F1; }
+
+  /* Body */
+  .gantt-body { position: relative; }
+  .row {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    height: var(--row-h);
+  }
+  .row:hover { background: var(--surface-alt); }
+  .row.row-milestone { background: var(--p-tint); }
+  .row.row-milestone:hover { background: var(--p-soft); }
+
+  .row-label {
+    width: var(--label-w);
+    min-width: var(--label-w);
+    padding: 0 18px;
+    display: flex; align-items: center;
+    background: inherit;
+    border-right: 1px solid var(--border-strong);
+    position: sticky;
+    left: 0;
+    z-index: 5;
+  }
+  .row:hover .row-label { background: var(--surface-alt); }
+  .row.row-milestone .row-label { background: var(--p-tint); }
+  .row.row-milestone:hover .row-label { background: var(--p-soft); }
+
+  .task-label-content {
+    display: flex; flex-direction: column;
+    gap: 7px;
+    width: 100%;
+    min-width: 0;
+  }
+  .task-name-row { display: flex; align-items: center; gap: 9px; min-width: 0; }
+  .task-status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .task-status-dot.done { background: var(--st-done); }
+  .task-status-dot.progress {
+    background: var(--st-progress);
+    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.2);
+  }
+  .task-status-dot.planned { background: var(--st-planned); }
+  .task-status-dot.milestone {
+    background: var(--p);
+    border-radius: 1px;
+    transform: rotate(45deg);
+    width: 8px; height: 8px;
+  }
+  .task-name {
+    font-weight: 500;
+    font-size: 13.5px;
+    letter-spacing: -0.005em;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+  }
+  .task-duration {
+    font-size: 11px;
+    color: var(--text-faint);
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+    margin-left: auto;
+    padding-left: 8px;
+  }
+  .task-teams {
+    display: flex; gap: 5px; flex-wrap: wrap;
+    padding-left: 17px;
+  }
+  .team-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    padding: 2px 9px 2px 7px;
+    border-radius: 999px;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .team-chip .team-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--p);
+  }
+  .team-chip.is-multi {
+    background: var(--p-tint);
+    border-color: var(--p-soft);
+    color: var(--p-dark);
+  }
+
+  .row-timeline {
+    position: relative;
+    flex: 1;
+    background-image:
+      repeating-linear-gradient(to right,
+        transparent 0,
+        transparent calc(var(--day-w) - 1px),
+        var(--border) calc(var(--day-w) - 1px),
+        var(--border) var(--day-w)),
+      repeating-linear-gradient(to right,
+        transparent 0,
+        transparent calc(var(--day-w) * 7 - 1px),
+        var(--border-strong) calc(var(--day-w) * 7 - 1px),
+        var(--border-strong) calc(var(--day-w) * 7));
+  }
+  .weekend-stripe {
+    position: absolute;
+    top: 0; bottom: 0;
+    background: var(--weekend-tint);
+    opacity: 0.6;
+    pointer-events: none;
+    width: calc(var(--day-w) * 2);
+  }
+
+  /* Bars */
+  .bar {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    border-radius: 5px;
+    display: flex; align-items: center;
+    padding: 0 10px;
+    font-size: 11px;
+    font-weight: 500;
+    color: white;
+    cursor: grab;
+    transition: filter 0.15s, box-shadow 0.15s;
+    overflow: hidden;
+    white-space: nowrap;
+    user-select: none;
+    z-index: 2;
+    height: 26px;
+  }
+  .bar:hover {
+    filter: brightness(1.05);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    z-index: 10;
+  }
+  .bar:active { cursor: grabbing; }
+  .bar-progress {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    background: rgba(0,0,0,0.18);
+    pointer-events: none;
+  }
+  .bar-content { position: relative; z-index: 1; overflow: hidden; text-overflow: ellipsis; }
+
+  .bar.status-done {
+    background: var(--p-dark);
+  }
+  .bar.status-progress {
+    background: var(--p);
+  }
+  .bar.status-planned {
+    background: var(--p-soft);
+    border: 1.5px solid var(--p);
+    color: var(--p-dark);
+    font-weight: 500;
+  }
+  .bar.status-planned .bar-progress { display: none; }
+
+  /* Milestone marker (diamond) */
+  .milestone {
+    position: absolute;
+    top: 50%;
+    width: 26px; height: 26px;
+    margin-left: -13px;
+    transform: translateY(-50%) rotate(45deg);
+    background: var(--p);
+    border: 2px solid white;
+    box-shadow: 0 0 0 1.5px var(--p), 0 3px 8px rgba(180, 99, 62, 0.3);
+    border-radius: 4px;
+    z-index: 3;
+    cursor: grab;
+    transition: transform 0.15s;
+  }
+  .milestone:hover {
+    transform: translateY(-50%) rotate(45deg) scale(1.1);
+    z-index: 11;
+  }
+  .milestone-flag {
+    position: absolute;
+    top: 50%;
+    margin-top: -10px;
+    padding-left: 22px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--p-dark);
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  /* Today indicator */
+  .today-line {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 2px;
+    background: var(--today);
+    z-index: 35;
+    pointer-events: none;
+    box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.15);
+  }
+
+  /* Tooltip on bar */
+  .bar[data-tooltip]:hover::after,
+  .milestone[data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--text);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    pointer-events: none;
+    z-index: 100;
+  }
+  .milestone[data-tooltip]:hover::after {
+    transform: translateX(-50%) rotate(-45deg);
+  }
+
+  /* Legend */
+  .legend {
+    display: flex; align-items: center; gap: 22px;
+    padding: 14px 28px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-muted);
+    flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: 7px; }
+  .legend-sw { display: inline-block; }
+  .legend-sw.done { width: 14px; height: 10px; background: var(--p-dark); border-radius: 2px; }
+  .legend-sw.progress { width: 14px; height: 10px; background: var(--p); border-radius: 2px; position: relative; overflow: hidden; }
+  .legend-sw.progress::after { content: ""; position: absolute; top: 0; left: 0; bottom: 0; width: 40%; background: rgba(0,0,0,0.18); }
+  .legend-sw.planned { width: 14px; height: 10px; background: var(--p-soft); border: 1.5px solid var(--p); border-radius: 2px; }
+  .legend-sw.milestone { width: 10px; height: 10px; background: var(--p); transform: rotate(45deg); border-radius: 2px; }
+  .legend-sw.today-sw { width: 2px; height: 12px; background: var(--today); }
+  .legend-spacer { flex: 1; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">R</div>
+      <span></span>
+      <span class="breadcrumb">
+        <span class="breadcrumb-sep">/</span>
+        <span>Scheduling</span>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current">Westmead Office Refurbishment</span>
+      </span>
+    </div>
+    <div class="topbar-right">
+      <span class="proto-pill">Prototype</span>
+      <span>Steven Trinh</span>
+    </div>
+  </div>
+
+  <!-- Project header card -->
+  <div class="project-card">
+    <a href="#" class="back-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Portfolio
+    </a>
+    <div class="project-title-row">
+      <h1 class="project-title">Westmead Office Refurbishment</h1>
+    </div>
+    <div class="project-meta-row">
+      <span class="meta-chip code">WMD-024</span>
+      <span class="meta-chip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16"/><path d="M5 21h14"/><path d="M10 9h4"/><path d="M10 13h4"/><path d="M10 17h4"/></svg>
+        Westmead Medical Centre
+      </span>
+      <span class="meta-chip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        158 Hawkesbury Rd, Westmead
+      </span>
+      <span class="meta-chip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Steven Trinh
+      </span>
+    </div>
+    <div class="project-stats-row">
+      <span class="status-pill">
+        <span class="pulse"></span>
+        In Progress
+      </span>
+      <span class="day-info">12 May → 27 Jun · <strong>Day 7</strong> of 47</span>
+      <div class="progress-bar"><div class="progress-bar-fill" id="progressBarFill" style="width: 14%;"></div></div>
+      <span class="progress-pct" id="progressPct">14%</span>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="toolbar-left">11 tasks · 8 teams · 2 milestones</div>
+    <div class="toolbar-controls">
+      <div class="date-nav">
+        <button class="btn btn-icon" title="Previous">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="date-range">4 May — 12 Jul 2026</span>
+        <button class="btn btn-icon" title="Next">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <button class="btn">Today</button>
+      <button class="btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        Filter
+      </button>
+    </div>
+  </div>
+
+  <!-- Gantt -->
+  <div class="gantt-wrap">
+    <div class="gantt" id="gantt"></div>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-item"><span class="legend-sw done"></span> Done</div>
+    <div class="legend-item"><span class="legend-sw progress"></span> In progress</div>
+    <div class="legend-item"><span class="legend-sw planned"></span> Planned</div>
+    <div class="legend-item"><span class="legend-sw milestone"></span> Milestone</div>
+    <div class="legend-item"><span class="legend-sw today-sw"></span> Today</div>
+    <div class="legend-spacer"></div>
+    <span>Bars are draggable · click a task to edit</span>
+  </div>
+
+</div>
+
+<script>
+// ===== Data =====
+// Timeline: Mon 4 May 2026 → Sun 12 Jul 2026 (70 days)
+const START_DATE = new Date(2026, 4, 4);
+const TOTAL_DAYS = 70;
+const TODAY_DAY = 14;       // May 18
+const DAY_W = 30;
+const LABEL_W = 360;
+
+// Westmead Office Refurbishment — May 12 → Jun 27
+const tasks = [
+  { name: "Site preparation",     start: 8,  end: 12, teams: ["In-House Crew A"],                       status: "done"      },
+  { name: "Demolition",           start: 14, end: 18, teams: ["Demolition Co"],                          status: "progress"  },
+  { name: "Framing",              start: 21, end: 32, teams: ["Apex Framing"],                          status: "planned"   },
+  { name: "Steel reinforcement",  start: 23, end: 27, teams: ["Steel Bros"],                            status: "planned"   },
+  { name: "Electrical rough-in",  start: 28, end: 39, teams: ["Sparky Electrical"],                     status: "planned"   },
+  { name: "Plumbing rough-in",    start: 30, end: 39, teams: ["Cascade Plumbing"],                      status: "planned"   },
+  { name: "Services inspection",  start: 42, end: 42, teams: ["Council Inspector"],                     status: "milestone" },
+  { name: "Drywall",              start: 35, end: 46, teams: ["In-House Crew B"],                       status: "planned"   },
+  { name: "Painting",             start: 42, end: 50, teams: ["ProFinish Painting", "Apprentice Crew"], status: "planned"   },
+  { name: "Carpentry & joinery",  start: 45, end: 52, teams: ["Joinery Plus"],                          status: "planned"   },
+  { name: "Handover",             start: 54, end: 54, teams: ["Project Team"],                          status: "milestone" },
+];
+
+// ===== Helpers =====
+function dayToPx(d) { return d * DAY_W; }
+function rangeWidth(start, end) { return (end - start + 1) * DAY_W; }
+function addDays(date, n) { const d = new Date(date); d.setDate(d.getDate() + n); return d; }
+function fmtDate(date) {
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return date.getDate() + ' ' + months[date.getMonth()];
+}
+function fmtDateLong(date) { return fmtDate(date) + ' ' + date.getFullYear(); }
+function dayOfWeek(date) { return date.getDay(); }
+function progressPct(start, end) {
+  if (end < TODAY_DAY) return 100;
+  if (start > TODAY_DAY) return 0;
+  const total = end - start + 1;
+  const done = TODAY_DAY - start;
+  return Math.max(0, Math.min(100, (done / total) * 100));
+}
+function durationLabel(start, end) {
+  if (start === end) return '1 day';
+  return (end - start + 1) + ' days';
+}
+
+// ===== Build header =====
+const gantt = document.getElementById('gantt');
+const header = document.createElement('div');
+header.className = 'gantt-header';
+header.innerHTML = `
+  <div class="header-label-cell">Task</div>
+  <div class="timeline-headers">
+    <div class="week-row" id="weekRow"></div>
+    <div class="day-row" id="dayRow"></div>
+  </div>
+`;
+gantt.appendChild(header);
+
+const weekRow = header.querySelector('#weekRow');
+const dayRow = header.querySelector('#dayRow');
+const totalWeeks = TOTAL_DAYS / 7;
+for (let w = 0; w < totalWeeks; w++) {
+  const cell = document.createElement('div');
+  cell.className = 'week-cell';
+  cell.style.width = (7 * DAY_W) + 'px';
+  cell.style.minWidth = (7 * DAY_W) + 'px';
+  cell.textContent = 'W/C ' + fmtDate(addDays(START_DATE, w * 7));
+  weekRow.appendChild(cell);
+}
+for (let d = 0; d < TOTAL_DAYS; d++) {
+  const date = addDays(START_DATE, d);
+  const dow = dayOfWeek(date);
+  const cell = document.createElement('div');
+  cell.className = 'day-cell';
+  if (dow === 0 || dow === 6) cell.classList.add('weekend');
+  if (d === TODAY_DAY) cell.classList.add('today');
+  cell.innerHTML = `<span class="dnum">${date.getDate()}</span>`;
+  dayRow.appendChild(cell);
+}
+
+// ===== Body =====
+const body = document.createElement('div');
+body.className = 'gantt-body';
+gantt.appendChild(body);
+
+function makeRowTimeline() {
+  const tl = document.createElement('div');
+  tl.className = 'row-timeline';
+  tl.style.width = (TOTAL_DAYS * DAY_W) + 'px';
+  for (let d = 0; d < TOTAL_DAYS; d++) {
+    if (dayOfWeek(addDays(START_DATE, d)) === 6) {
+      const stripe = document.createElement('div');
+      stripe.className = 'weekend-stripe';
+      stripe.style.left = dayToPx(d) + 'px';
+      tl.appendChild(stripe);
+    }
+  }
+  return tl;
+}
+
+tasks.forEach((task) => {
+  const row = document.createElement('div');
+  row.className = 'row' + (task.status === 'milestone' ? ' row-milestone' : '');
+
+  // Label
+  const label = document.createElement('div');
+  label.className = 'row-label';
+  const teamChips = task.teams.map((team, i) => `
+    <span class="team-chip${task.teams.length > 1 ? ' is-multi' : ''}">
+      <span class="team-dot"></span>${team}
+    </span>
+  `).join('');
+  label.innerHTML = `
+    <div class="task-label-content">
+      <div class="task-name-row">
+        <span class="task-status-dot ${task.status}"></span>
+        <span class="task-name">${task.name}</span>
+        <span class="task-duration">${durationLabel(task.start, task.end)}</span>
+      </div>
+      ${task.teams.length ? `<div class="task-teams">${teamChips}</div>` : ''}
+    </div>
+  `;
+  row.appendChild(label);
+
+  // Timeline cell
+  const tl = makeRowTimeline();
+  const taskStart = addDays(START_DATE, task.start);
+  const taskEnd = addDays(START_DATE, task.end);
+
+  if (task.status === 'milestone') {
+    // Diamond marker centered on the milestone day; name is already in row label
+    const m = document.createElement('div');
+    m.className = 'milestone';
+    m.style.left = (dayToPx(task.start) + DAY_W / 2) + 'px';
+    m.dataset.tooltip = `${task.name} · ${fmtDateLong(taskStart)}`;
+    tl.appendChild(m);
+  } else {
+    const visEnd = Math.min(task.end, TOTAL_DAYS - 1);
+    const bar = document.createElement('div');
+    bar.className = `bar status-${task.status}`;
+    bar.style.left = dayToPx(task.start) + 'px';
+    bar.style.width = rangeWidth(task.start, visEnd) + 'px';
+    bar.dataset.tooltip = `${task.name} · ${task.teams.join(' + ')} · ${fmtDateLong(taskStart)} → ${fmtDateLong(taskEnd)}`;
+    const pct = progressPct(task.start, task.end);
+    bar.innerHTML = `
+      <div class="bar-progress" style="width:${pct}%"></div>
+      <span class="bar-content">${task.name}</span>
+    `;
+    tl.appendChild(bar);
+  }
+
+  row.appendChild(tl);
+  body.appendChild(row);
+});
+
+// ===== Today line =====
+const todayLine = document.createElement('div');
+todayLine.className = 'today-line';
+todayLine.style.left = (LABEL_W + dayToPx(TODAY_DAY) + DAY_W / 2 - 1) + 'px';
+gantt.appendChild(todayLine);
+requestAnimationFrame(() => {
+  todayLine.style.height = body.offsetHeight + 'px';
+  todayLine.style.top = header.offsetHeight + 'px';
+});
+
+// ===== Interactivity =====
+// Scroll today into view
+requestAnimationFrame(() => {
+  const wrap = document.querySelector('.gantt-wrap');
+  wrap.scrollLeft = Math.max(0, dayToPx(TODAY_DAY) - 120);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: construction_scheduling
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # File repository / photo upload server
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    ports:
+      - "9000:9000"     # S3 API
+      - "9001:9001"     # MinIO Console
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password123
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  # app:
+  #   build: .
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     DATABASE_URL: postgresql://admin:password123@db:5432/construction_scheduling
+  #     REDIS_URL: redis://redis:6379
+  #     NEXT_PUBLIC_API_URL: http://localhost:3000
+  #     NODE_ENV: development
+
+  #     # MinIO / File Upload Config
+  #     S3_ENDPOINT: http://minio:9000
+  #     S3_BUCKET: uploads
+  #     S3_ACCESS_KEY: admin
+  #     S3_SECRET_KEY: password123
+  #     S3_REGION: us-east-1
+
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #     minio:
+  #       condition: service_started
+
+  #   volumes:
+  #     - .:/app
+  #     - /app/node_modules
+
+    # command: npm run dev
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:

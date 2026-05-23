@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<title> · Portfolio Schedule</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --surface-alt: #FAF8F3;
+    --border: #E7E3D9;
+    --border-strong: #D6D1C3;
+    --text: #1A1A1F;
+    --text-muted: #6B6960;
+    --text-faint: #9C998E;
+    --accent: #C2410C;              /* terracotta */
+    --today: #DC2626;
+    --weekend-tint: #F2EFE7;
+
+    /* Project colour families — muted, harmonious */
+    --p1: #B4633E;  --p1-soft: #E8D4C7;  /* Westmead — terracotta */
+    --p2: #4A6B82;  --p2-soft: #D2DCE3;  /* Chatswood — slate blue */
+    --p3: #5C7252;  --p3-soft: #D8E0D2;  /* Parramatta — sage */
+    --p4: #A88A3C;  --p4-soft: #E8DEC2;  /* Surry Hills — amber */
+    --p5: #7A5C7B;  --p5-soft: #DDD2DE;  /* Penrith — mauve */
+
+    --day-w: 30px;
+    --label-w: 320px;
+    --header-h: 64px;
+    --week-h: 28px;
+    --day-h: 28px;
+    --row-h: 44px;
+    --project-row-h: 52px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ===== App chrome ===== */
+  .app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 28px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+    font-size: 16px;
+    letter-spacing: -0.01em;
+  }
+  .brand-mark {
+    width: 26px; height: 26px;
+    border-radius: 7px;
+    background: var(--accent);
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .breadcrumb {
+    color: var(--text-faint);
+    font-weight: 400;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .breadcrumb-sep { opacity: 0.5; }
+  .topbar-right {
+    display: flex; align-items: center; gap: 16px;
+    font-size: 13px; color: var(--text-muted);
+  }
+  .proto-pill {
+    background: #FEF3C7;
+    color: #92400E;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 28px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    gap: 24px;
+  }
+  .page-title {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin: 0;
+  }
+  .page-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .toolbar-controls {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .view-toggle {
+    display: flex;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 3px;
+  }
+  .view-toggle button {
+    border: 0;
+    background: transparent;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text-muted);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .view-toggle button.active {
+    background: white;
+    color: var(--text);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  }
+  .view-toggle button:not(.active):hover { color: var(--text); }
+
+  .btn {
+    border: 1px solid var(--border-strong);
+    background: white;
+    padding: 7px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--text);
+    border-radius: 7px;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: all 0.15s;
+  }
+  .btn:hover { background: var(--surface-alt); }
+  .btn-primary {
+    background: var(--text);
+    color: white;
+    border-color: var(--text);
+  }
+  .btn-primary:hover { background: #2d2d35; }
+  .btn-icon {
+    padding: 7px 9px;
+  }
+  .btn svg { width: 14px; height: 14px; }
+
+  .date-nav {
+    display: flex; align-items: center; gap: 4px;
+  }
+  .date-range {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 0 10px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ===== Gantt ===== */
+  .gantt-wrap {
+    flex: 1;
+    overflow: auto;
+    background: var(--surface);
+    position: relative;
+  }
+  .gantt {
+    position: relative;
+    min-width: max-content;
+  }
+
+  /* Header row: fixed-position top, sticky horizontally */
+  .gantt-header {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .header-label-cell {
+    width: var(--label-w);
+    min-width: var(--label-w);
+    padding: 0 18px;
+    display: flex; align-items: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: var(--surface);
+    border-right: 1px solid var(--border-strong);
+    position: sticky;
+    left: 0;
+    z-index: 31;
+    height: calc(var(--week-h) + var(--day-h));
+  }
+  .timeline-headers { display: flex; flex-direction: column; }
+  .week-row, .day-row { display: flex; }
+  .week-row { height: var(--week-h); }
+  .day-row { height: var(--day-h); border-top: 1px solid var(--border); }
+  .week-cell {
+    border-right: 1px solid var(--border-strong);
+    padding: 6px 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+    background: var(--surface);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .day-cell {
+    width: var(--day-w);
+    min-width: var(--day-w);
+    border-right: 1px solid var(--border);
+    text-align: center;
+    font-size: 10px;
+    color: var(--text-faint);
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: var(--surface);
+    line-height: 1.1;
+  }
+  .day-cell.weekend { background: var(--weekend-tint); color: var(--text-faint); }
+  .day-cell .dnum { font-weight: 600; color: var(--text-muted); font-size: 11px; }
+  .day-cell.today .dnum { color: var(--today); }
+  .day-cell.today { background: #FFF1F1; }
+
+  /* Body */
+  .gantt-body { position: relative; }
+  .row {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    height: var(--row-h);
+  }
+  .row.project-row { height: var(--project-row-h); }
+  .row.project-row:hover { background: var(--surface-alt); }
+  .row.task-row { background: #FCFBF7; }
+  .row.task-row:hover { background: var(--surface-alt); }
+
+  .row-label {
+    width: var(--label-w);
+    min-width: var(--label-w);
+    padding: 0 18px;
+    display: flex; align-items: center; gap: 10px;
+    background: inherit;
+    border-right: 1px solid var(--border-strong);
+    position: sticky;
+    left: 0;
+    z-index: 5;
+  }
+  .row.project-row .row-label { background: var(--surface); }
+  .row.project-row:hover .row-label { background: var(--surface-alt); }
+  .row.task-row .row-label { background: #FCFBF7; }
+  .row.task-row:hover .row-label { background: var(--surface-alt); }
+
+  .chevron {
+    width: 18px; height: 18px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: transform 0.2s, background 0.15s;
+    flex-shrink: 0;
+  }
+  .chevron:hover { background: var(--border); color: var(--text); }
+  .row.expanded .chevron { transform: rotate(90deg); }
+  .chevron svg { width: 12px; height: 12px; }
+
+  .project-name {
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+  }
+  .project-meta {
+    font-size: 11px;
+    color: var(--text-faint);
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+    margin-left: auto;
+    padding-left: 8px;
+    flex-shrink: 0;
+  }
+
+  .task-label {
+    padding-left: 30px;
+    display: flex; align-items: center; gap: 10px;
+    width: 100%;
+    overflow: hidden;
+  }
+  .task-name {
+    font-size: 13px;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .team-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    padding: 2px 8px 2px 6px;
+    border-radius: 999px;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-left: auto;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .team-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--text-muted);
+  }
+
+  .row-timeline {
+    position: relative;
+    flex: 1;
+    background-image:
+      repeating-linear-gradient(to right,
+        transparent 0,
+        transparent calc(var(--day-w) - 1px),
+        var(--border) calc(var(--day-w) - 1px),
+        var(--border) var(--day-w)),
+      repeating-linear-gradient(to right,
+        transparent 0,
+        transparent calc(var(--day-w) * 7 - 1px),
+        var(--border-strong) calc(var(--day-w) * 7 - 1px),
+        var(--border-strong) calc(var(--day-w) * 7));
+  }
+
+  /* Weekend overlay handled via JS-positioned divs */
+  .weekend-stripe {
+    position: absolute;
+    top: 0; bottom: 0;
+    background: var(--weekend-tint);
+    opacity: 0.6;
+    pointer-events: none;
+    width: calc(var(--day-w) * 2);
+  }
+
+  /* Bars */
+  .bar {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    border-radius: 5px;
+    display: flex; align-items: center;
+    padding: 0 10px;
+    font-size: 11px;
+    font-weight: 500;
+    color: white;
+    cursor: grab;
+    transition: filter 0.15s, transform 0.15s, box-shadow 0.15s;
+    overflow: hidden;
+    white-space: nowrap;
+    user-select: none;
+    z-index: 2;
+  }
+  .bar:hover {
+    filter: brightness(1.05);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    z-index: 10;
+  }
+  .bar:active { cursor: grabbing; }
+  .bar-project {
+    height: 22px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+  }
+  .bar-task {
+    height: 24px;
+    font-weight: 500;
+  }
+  .bar-progress {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    background: rgba(0,0,0,0.18);
+    border-radius: 5px 0 0 5px;
+    pointer-events: none;
+  }
+  .bar-content {
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .bar-clipped-right::after {
+    content: "";
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 20px;
+    background: linear-gradient(to right, transparent, rgba(0,0,0,0.15));
+    border-radius: 0 5px 5px 0;
+  }
+
+  /* Project colour assignment */
+  .p-1 .bar-project { background: var(--p1); }
+  .p-1 .bar-task    { background: var(--p1); }
+  .p-2 .bar-project { background: var(--p2); }
+  .p-2 .bar-task    { background: var(--p2); }
+  .p-3 .bar-project { background: var(--p3); }
+  .p-3 .bar-task    { background: var(--p3); }
+  .p-4 .bar-project { background: var(--p4); }
+  .p-4 .bar-task    { background: var(--p4); }
+  .p-5 .bar-project { background: var(--p5); }
+  .p-5 .bar-task    { background: var(--p5); }
+
+  .p-1 .team-dot { background: var(--p1); }
+  .p-2 .team-dot { background: var(--p2); }
+  .p-3 .team-dot { background: var(--p3); }
+  .p-4 .team-dot { background: var(--p4); }
+  .p-5 .team-dot { background: var(--p5); }
+
+  /* Today indicator */
+  .today-line {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 2px;
+    background: var(--today);
+    z-index: 35;
+    pointer-events: none;
+    box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.15);
+  }
+  .today-line::before {
+    content: "Today";
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--today);
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  /* Hide task rows when project is collapsed */
+  .task-row.hidden { display: none; }
+
+  /* Tooltip on bar */
+  .bar[data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--text);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* Legend / footer */
+  .legend {
+    display: flex; align-items: center; gap: 20px;
+    padding: 14px 28px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-muted);
+    flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-sw {
+    width: 14px; height: 8px;
+    border-radius: 2px;
+    background: var(--text-muted);
+  }
+  .legend-sw.proj { background: var(--p1); }
+  .legend-sw.task { background: var(--p2); }
+  .legend-sw.today-sw { background: var(--today); height: 12px; width: 2px; border-radius: 0; }
+  .legend-sw.conflict-sw {
+    background: transparent;
+    box-shadow: 0 0 0 2px var(--today);
+    width: 10px; height: 8px;
+    border-radius: 2px;
+    margin: 0 2px;
+  }
+  .legend-spacer { flex: 1; }
+  .help-link {
+    color: var(--text-muted);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--text-faint);
+  }
+  .help-link:hover { color: var(--text); }
+
+  /* ===== Multi-view ===== */
+  .body-section { display: block; }
+  .body-section.hidden { display: none; }
+
+  /* Team rows */
+  .row.team-row { background: var(--surface); }
+  .row.team-row:hover { background: var(--surface-alt); }
+  .row.team-row .row-label { background: var(--surface); }
+  .row.team-row:hover .row-label { background: var(--surface-alt); }
+  .team-label-content {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    width: 100%;
+    min-width: 0;
+  }
+  .team-name {
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.2;
+  }
+  .team-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .team-count-chip {
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.4;
+  }
+  .team-conflict-chip {
+    background: #FEE2E2;
+    color: #991B1B;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    line-height: 1.4;
+  }
+  .team-conflict-chip svg { flex-shrink: 0; }
+
+  /* Small accent strip on team rows that have conflicts */
+  .row.team-row.has-conflict-row .row-label::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 12px; bottom: 12px;
+    width: 3px;
+    background: var(--today);
+    border-radius: 0 2px 2px 0;
+  }
+
+  /* Conflict styling */
+  .bar.has-conflict {
+    box-shadow: 0 0 0 2px white, 0 0 0 4px var(--today);
+  }
+  .bar.has-conflict:hover {
+    box-shadow: 0 0 0 2px white, 0 0 0 4px var(--today), 0 4px 14px rgba(220,38,38,0.3);
+    z-index: 12;
+  }
+  .team-chip.has-conflict {
+    background: #FEE2E2;
+    border-color: #FCA5A5;
+    color: #991B1B;
+  }
+  .team-chip.has-conflict .team-dot { background: #DC2626; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">R</div>
+      <span></span>
+      <span class="breadcrumb">
+        <span class="breadcrumb-sep">/</span>
+        <span>Scheduling</span>
+        <span class="breadcrumb-sep">/</span>
+        <span>Portfolio</span>
+      </span>
+    </div>
+    <div class="topbar-right">
+      <span class="proto-pill">Prototype</span>
+      <span>Steven Trinh</span>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div>
+      <h1 class="page-title">Portfolio Schedule</h1>
+      <div class="page-subtitle" id="subtitle">5 projects · click a row to expand its tasks</div>
+    </div>
+    <div class="toolbar-controls">
+      <div class="view-toggle">
+        <button class="active" data-view="project">By Project</button>
+        <button data-view="team">By Team</button>
+      </div>
+      <div class="date-nav">
+        <button class="btn btn-icon" title="Previous">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="date-range">4 May — 12 Jul 2026</span>
+        <button class="btn btn-icon" title="Next">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <button class="btn">Today</button>
+    </div>
+  </div>
+
+  <!-- Gantt -->
+  <div class="gantt-wrap">
+    <div class="gantt" id="gantt">
+      <!-- header & body injected by JS -->
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-item"><span class="legend-sw proj"></span> Project span</div>
+    <div class="legend-item"><span class="legend-sw task"></span> Task</div>
+    <div class="legend-item"><span class="legend-sw today-sw"></span> Today</div>
+    <div class="legend-item"><span class="legend-sw conflict-sw"></span> Scheduling conflict</div>
+    <div class="legend-item">⌗ Darker shading = progress</div>
+    <div class="legend-spacer"></div>
+    <a href="#" class="help-link">5 projects · 22 tasks · 11 teams</a>
+  </div>
+
+</div>
+
+<script>
+// ===== Data =====
+// Timeline: Mon 4 May 2026 → Sun 12 Jul 2026 (70 days / 10 weeks)
+const START_DATE = new Date(2026, 4, 4);
+const TOTAL_DAYS = 70;
+const TODAY_DAY = 14;
+const DAY_W = 30;
+const LABEL_W = 320;
+
+const projects = [
+  {
+    id: 1, code: "WMD-024",
+    name: "Westmead Office Refurbishment", shortName: "Westmead Office",
+    start: 8, end: 54, expanded: true,
+    tasks: [
+      { name: "Site preparation",     start: 8,  end: 12, team: "In-House Crew A" },
+      { name: "Demolition",           start: 14, end: 18, team: "Demolition Co" },
+      { name: "Framing",              start: 21, end: 32, team: "Apex Framing" },
+      { name: "Electrical rough-in",  start: 28, end: 39, team: "Sparky Electrical" },
+      { name: "Drywall",              start: 35, end: 46, team: "In-House Crew B" },
+      { name: "Finishing",            start: 42, end: 54, team: "ProFinish Painting" },
+    ]
+  },
+  {
+    id: 2, code: "CHT-031",
+    name: "Chatswood Retail Fitout", shortName: "Chatswood Retail",
+    start: 21, end: 60, expanded: false,
+    tasks: [
+      { name: "Demolition",      start: 21, end: 25, team: "Demolition Co" },
+      { name: "Framing",         start: 28, end: 39, team: "Apex Framing" },
+      { name: "Glazing",         start: 35, end: 46, team: "Glass Works" },
+      { name: "Fitout install",  start: 49, end: 60, team: "In-House Crew A" },
+    ]
+  },
+  {
+    id: 3, code: "PMT-018",
+    name: "Parramatta Apartment Block", shortName: "Parramatta Apts",
+    start: 1, end: 103, clippedRight: true, expanded: true,
+    tasks: [
+      { name: "Foundation",       start: 1,  end: 18, team: "Concrete Pro" },
+      { name: "Framing — L1",     start: 21, end: 39, team: "In-House Crew B" },
+      { name: "Framing — L2",     start: 42, end: 60, team: "In-House Crew B" },
+      { name: "Electrical",       start: 63, end: 88, team: "Sparky Electrical", clippedRight: true },
+    ]
+  },
+  {
+    id: 4, code: "SRH-009",
+    name: "Surry Hills Townhouse", shortName: "Surry Hills Twn",
+    start: 28, end: 67, expanded: false,
+    tasks: [
+      { name: "Strip-out",   start: 28, end: 32, team: "Demolition Co" },
+      { name: "Structural",  start: 35, end: 49, team: "Apex Framing" },
+      { name: "Services",    start: 49, end: 60, team: "Cascade Plumbing" },
+      { name: "Finishing",   start: 56, end: 67, team: "ProFinish Painting" },
+    ]
+  },
+  {
+    id: 5, code: "PEN-042",
+    name: "Penrith Industrial Warehouse", shortName: "Penrith Whse",
+    start: 42, end: 118, clippedRight: true, expanded: false,
+    tasks: [
+      { name: "Site works",      start: 42, end: 53, team: "Site Civil Group" },
+      { name: "Slab pour",       start: 49, end: 67, team: "Concrete Pro" },
+      { name: "Steel erection",  start: 70, end: 95, team: "Steel Bros", clippedRight: true },
+      { name: "Cladding",        start: 84, end: 109, team: "In-House Crew A", clippedRight: true },
+    ]
+  },
+];
+
+// ===== Helpers =====
+function dayToPx(d) { return d * DAY_W; }
+function rangeWidth(start, end) { return (end - start + 1) * DAY_W; }
+function addDays(date, n) { const d = new Date(date); d.setDate(d.getDate() + n); return d; }
+function fmtDate(date) {
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return date.getDate() + ' ' + months[date.getMonth()];
+}
+function fmtDateLong(date) { return fmtDate(date) + ' ' + date.getFullYear(); }
+function dayOfWeek(date) { return date.getDay(); }
+function progressPct(start, end) {
+  if (end < TODAY_DAY) return 100;
+  if (start > TODAY_DAY) return 0;
+  const total = end - start + 1;
+  const done = TODAY_DAY - start;
+  return Math.max(0, Math.min(100, (done / total) * 100));
+}
+
+// ===== Conflict detection (shared by both views) =====
+// Mark every task that overlaps another task assigned to the same team.
+function detectConflicts() {
+  const byTeam = new Map();
+  projects.forEach(p => p.tasks.forEach(t => {
+    if (!byTeam.has(t.team)) byTeam.set(t.team, []);
+    byTeam.get(t.team).push(t);
+  }));
+  byTeam.forEach(tasks => {
+    for (let i = 0; i < tasks.length; i++) {
+      for (let j = i + 1; j < tasks.length; j++) {
+        if (tasks[i].start <= tasks[j].end && tasks[j].start <= tasks[i].end) {
+          tasks[i].hasConflict = true;
+          tasks[j].hasConflict = true;
+        }
+      }
+    }
+  });
+}
+detectConflicts();
+
+// ===== Header (shared between views) =====
+const gantt = document.getElementById('gantt');
+const header = document.createElement('div');
+header.className = 'gantt-header';
+header.innerHTML = `
+  <div class="header-label-cell" id="headerLabel">Project / Task</div>
+  <div class="timeline-headers">
+    <div class="week-row" id="weekRow"></div>
+    <div class="day-row" id="dayRow"></div>
+  </div>
+`;
+gantt.appendChild(header);
+
+const weekRow = header.querySelector('#weekRow');
+const dayRow = header.querySelector('#dayRow');
+const headerLabel = header.querySelector('#headerLabel');
+
+const totalWeeks = TOTAL_DAYS / 7;
+for (let w = 0; w < totalWeeks; w++) {
+  const weekStart = addDays(START_DATE, w * 7);
+  const cell = document.createElement('div');
+  cell.className = 'week-cell';
+  cell.style.width = (7 * DAY_W) + 'px';
+  cell.style.minWidth = (7 * DAY_W) + 'px';
+  cell.textContent = 'W/C ' + fmtDate(weekStart);
+  weekRow.appendChild(cell);
+}
+
+for (let d = 0; d < TOTAL_DAYS; d++) {
+  const date = addDays(START_DATE, d);
+  const dow = dayOfWeek(date);
+  const cell = document.createElement('div');
+  cell.className = 'day-cell';
+  if (dow === 0 || dow === 6) cell.classList.add('weekend');
+  if (d === TODAY_DAY) cell.classList.add('today');
+  cell.innerHTML = `<span class="dnum">${date.getDate()}</span>`;
+  dayRow.appendChild(cell);
+}
+
+// ===== Body containers =====
+const bodyByProject = document.createElement('div');
+bodyByProject.className = 'body-section';
+bodyByProject.id = 'bodyByProject';
+gantt.appendChild(bodyByProject);
+
+const bodyByTeam = document.createElement('div');
+bodyByTeam.className = 'body-section hidden';
+bodyByTeam.id = 'bodyByTeam';
+gantt.appendChild(bodyByTeam);
+
+function makeRowTimeline() {
+  const tl = document.createElement('div');
+  tl.className = 'row-timeline';
+  tl.style.width = (TOTAL_DAYS * DAY_W) + 'px';
+  for (let d = 0; d < TOTAL_DAYS; d++) {
+    if (dayOfWeek(addDays(START_DATE, d)) === 6) {
+      const stripe = document.createElement('div');
+      stripe.className = 'weekend-stripe';
+      stripe.style.left = dayToPx(d) + 'px';
+      tl.appendChild(stripe);
+    }
+  }
+  return tl;
+}
+
+// ===== Render: By Project =====
+function renderProjectView() {
+  projects.forEach((proj) => {
+    const projRow = document.createElement('div');
+    projRow.className = `row project-row p-${proj.id}${proj.expanded ? ' expanded' : ''}`;
+    projRow.dataset.projectId = proj.id;
+
+    const label = document.createElement('div');
+    label.className = 'row-label';
+    label.innerHTML = `
+      <span class="chevron" data-toggle="${proj.id}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </span>
+      <span class="project-name">${proj.name}</span>
+      <span class="project-meta">${proj.code}</span>
+    `;
+    projRow.appendChild(label);
+
+    const tl = makeRowTimeline();
+    const visEnd = Math.min(proj.end, TOTAL_DAYS - 1);
+    const projStart = addDays(START_DATE, proj.start);
+    const projEnd = addDays(START_DATE, proj.end);
+    const bar = document.createElement('div');
+    bar.className = 'bar bar-project' + (proj.clippedRight ? ' bar-clipped-right' : '');
+    bar.style.left = dayToPx(proj.start) + 'px';
+    bar.style.width = rangeWidth(proj.start, visEnd) + 'px';
+    bar.dataset.tooltip = `${proj.name} · ${fmtDateLong(projStart)} → ${fmtDateLong(projEnd)}`;
+    bar.innerHTML = `
+      <div class="bar-progress" style="width:${progressPct(proj.start, proj.end)}%"></div>
+      <span class="bar-content">${proj.name} · ${proj.tasks.length} tasks</span>
+    `;
+    tl.appendChild(bar);
+    projRow.appendChild(tl);
+    bodyByProject.appendChild(projRow);
+
+    proj.tasks.forEach((task) => {
+      const taskRow = document.createElement('div');
+      taskRow.className = `row task-row p-${proj.id}` + (proj.expanded ? '' : ' hidden');
+      taskRow.dataset.projectId = proj.id;
+
+      const tlabel = document.createElement('div');
+      tlabel.className = 'row-label';
+      tlabel.innerHTML = `
+        <div class="task-label">
+          <span class="task-name">${task.name}</span>
+          <span class="team-chip${task.hasConflict ? ' has-conflict' : ''}"><span class="team-dot"></span>${task.team}</span>
+        </div>
+      `;
+      taskRow.appendChild(tlabel);
+
+      const ttl = makeRowTimeline();
+      const tVisEnd = Math.min(task.end, TOTAL_DAYS - 1);
+      const taskStart = addDays(START_DATE, task.start);
+      const taskEnd = addDays(START_DATE, task.end);
+      const tbar = document.createElement('div');
+      tbar.className = 'bar bar-task' + (task.clippedRight ? ' bar-clipped-right' : '');
+      tbar.style.left = dayToPx(task.start) + 'px';
+      tbar.style.width = rangeWidth(task.start, tVisEnd) + 'px';
+      tbar.dataset.tooltip = `${task.name} · ${task.team} · ${fmtDateLong(taskStart)} → ${fmtDateLong(taskEnd)}${task.hasConflict ? ' · ⚠ conflict' : ''}`;
+      tbar.innerHTML = `
+        <div class="bar-progress" style="width:${progressPct(task.start, task.end)}%"></div>
+        <span class="bar-content">${task.name}</span>
+      `;
+      ttl.appendChild(tbar);
+      taskRow.appendChild(ttl);
+      bodyByProject.appendChild(taskRow);
+    });
+  });
+}
+
+// ===== Build team data: group tasks by team, assign lanes, count conflicts =====
+function buildTeamData() {
+  const teamMap = new Map();
+  projects.forEach(proj => {
+    proj.tasks.forEach(task => {
+      if (!teamMap.has(task.team)) teamMap.set(task.team, { name: task.team, tasks: [] });
+      teamMap.get(task.team).tasks.push({
+        ...task,
+        projectId: proj.id,
+        projectName: proj.name,
+        projectShortName: proj.shortName,
+        projectCode: proj.code,
+      });
+    });
+  });
+
+  const teams = Array.from(teamMap.values());
+  teams.forEach(team => {
+    // Lanes: sort by start, place each task in the lowest lane whose last task already ended
+    const indexed = team.tasks.map((t, i) => ({ t, i })).sort((a, b) => a.t.start - b.t.start);
+    const laneEnds = [];
+    indexed.forEach(({ t, i }) => {
+      let placed = false;
+      for (let l = 0; l < laneEnds.length; l++) {
+        if (laneEnds[l] < t.start) {
+          team.tasks[i].lane = l;
+          laneEnds[l] = t.end;
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        team.tasks[i].lane = laneEnds.length;
+        laneEnds.push(t.end);
+      }
+    });
+    team.lanes = Math.max(1, laneEnds.length);
+    team.conflictCount = team.tasks.filter(t => t.hasConflict).length;
+  });
+
+  // Order: teams with conflicts first, then most-loaded, then alphabetical
+  teams.sort((a, b) => {
+    if ((b.conflictCount > 0) !== (a.conflictCount > 0)) return b.conflictCount > 0 ? 1 : -1;
+    if (b.conflictCount !== a.conflictCount) return b.conflictCount - a.conflictCount;
+    if (b.tasks.length !== a.tasks.length) return b.tasks.length - a.tasks.length;
+    return a.name.localeCompare(b.name);
+  });
+
+  return teams;
+}
+
+// ===== Render: By Team =====
+const ROW_PAD_Y = 12;
+const BAR_HEIGHT = 24;
+const BAR_GAP = 10;
+const MIN_TEAM_ROW_H = 68;
+
+function renderTeamView() {
+  const teams = buildTeamData();
+  teams.forEach(team => {
+    const laneBlockH = team.lanes * BAR_HEIGHT + (team.lanes - 1) * BAR_GAP;
+    const rowHeight = Math.max(MIN_TEAM_ROW_H, laneBlockH + 2 * ROW_PAD_Y);
+    const topOffset = (rowHeight - laneBlockH) / 2;
+
+    const teamRow = document.createElement('div');
+    teamRow.className = 'row team-row' + (team.conflictCount > 0 ? ' has-conflict-row' : '');
+    teamRow.style.height = rowHeight + 'px';
+
+    const label = document.createElement('div');
+    label.className = 'row-label';
+    label.innerHTML = `
+      <div class="team-label-content">
+        <span class="team-name">${team.name}</span>
+        <div class="team-meta">
+          <span class="team-count-chip">${team.tasks.length} task${team.tasks.length === 1 ? '' : 's'}</span>
+          ${team.conflictCount > 0 ? `<span class="team-conflict-chip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            ${team.conflictCount} conflict${team.conflictCount === 1 ? '' : 's'}
+          </span>` : ''}
+        </div>
+      </div>
+    `;
+    teamRow.appendChild(label);
+
+    const tl = makeRowTimeline();
+    team.tasks.forEach(task => {
+      const visEnd = Math.min(task.end, TOTAL_DAYS - 1);
+      const taskStart = addDays(START_DATE, task.start);
+      const taskEnd = addDays(START_DATE, task.end);
+      const bar = document.createElement('div');
+      bar.className = `bar bar-task p-${task.projectId}` +
+        (task.clippedRight ? ' bar-clipped-right' : '') +
+        (task.hasConflict ? ' has-conflict' : '');
+      bar.style.left = dayToPx(task.start) + 'px';
+      bar.style.width = rangeWidth(task.start, visEnd) + 'px';
+      // Vertically center the lane block within the row, then place each bar by its lane
+      bar.style.top = (topOffset + task.lane * (BAR_HEIGHT + BAR_GAP)) + 'px';
+      bar.style.transform = 'none';
+      bar.dataset.tooltip = `${task.projectName} · ${task.name} · ${fmtDateLong(taskStart)} → ${fmtDateLong(taskEnd)}${task.hasConflict ? ' · ⚠ conflict' : ''}`;
+      bar.innerHTML = `
+        <div class="bar-progress" style="width:${progressPct(task.start, task.end)}%"></div>
+        <span class="bar-content">${task.projectShortName} · ${task.name}</span>
+      `;
+      tl.appendChild(bar);
+    });
+    teamRow.appendChild(tl);
+    bodyByTeam.appendChild(teamRow);
+  });
+}
+
+renderProjectView();
+renderTeamView();
+
+// ===== Today line =====
+const todayLine = document.createElement('div');
+todayLine.className = 'today-line';
+todayLine.style.left = (LABEL_W + dayToPx(TODAY_DAY) + DAY_W / 2 - 1) + 'px';
+gantt.appendChild(todayLine);
+
+function updateTodayLine() {
+  requestAnimationFrame(() => {
+    const visibleBody = document.querySelector('.body-section:not(.hidden)');
+    todayLine.style.height = visibleBody.offsetHeight + 'px';
+    todayLine.style.top = header.offsetHeight + 'px';
+  });
+}
+updateTodayLine();
+
+// ===== Interactivity =====
+function toggleProject(id) {
+  const projRow = document.querySelector(`.project-row[data-project-id="${id}"]`);
+  projRow.classList.toggle('expanded');
+  document.querySelectorAll(`.task-row[data-project-id="${id}"]`).forEach(r => {
+    r.classList.toggle('hidden');
+  });
+  updateTodayLine();
+}
+
+document.querySelectorAll('.chevron[data-toggle]').forEach(ch => {
+  ch.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleProject(ch.dataset.toggle);
+  });
+});
+
+document.querySelectorAll('.project-row .row-label').forEach(lbl => {
+  lbl.addEventListener('click', (e) => {
+    if (e.target.closest('.chevron')) return;
+    toggleProject(lbl.closest('.project-row').dataset.projectId);
+  });
+});
+
+// View toggle — actually swap the visible body
+const subtitle = document.getElementById('subtitle');
+const subtitleByView = {
+  project: '5 projects · click a row to expand its tasks',
+  team: '11 teams · red rings flag scheduling conflicts'
+};
+const headerLabelByView = {
+  project: 'Project / Task',
+  team: 'Team'
+};
+
+document.querySelectorAll('.view-toggle button').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.view-toggle button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    const view = b.dataset.view;
+    bodyByProject.classList.toggle('hidden', view !== 'project');
+    bodyByTeam.classList.toggle('hidden', view !== 'team');
+    subtitle.textContent = subtitleByView[view];
+    headerLabel.textContent = headerLabelByView[view];
+    updateTodayLine();
+  });
+});
+
+// Scroll today into view on load
+requestAnimationFrame(() => {
+  const wrap = document.querySelector('.gantt-wrap');
+  wrap.scrollLeft = Math.max(0, dayToPx(TODAY_DAY) - 100);
+});
+</script>
+</body>
+</html>
