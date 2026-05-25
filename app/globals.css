@@ -816,3 +816,39 @@ body {
   padding: 0 10px;
   font-variant-numeric: tabular-nums;
 }
+.drag-preview-bar {
+  position: absolute;
+  height: 24px;
+  background: rgba(120,120,120,0.25);
+  border: 2px dashed rgba(120,120,120,0.6);
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.task-hover-tooltip {
+  position: absolute;
+  top: -34px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2937;
+  color: white;
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+  z-index: 20;
+  pointer-events: none;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+.task-hover-tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  background: #1f2937;
+  transform: translateX(-50%) rotate(45deg);
+}

@@ -78,8 +78,8 @@ export function EnhancedTaskModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-end z-50">
-      <div className="bg-white w-full max-w-md rounded-t-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex justify-end z-50">
+      <div className="bg-white h-full w-full max-w-md shadow-xl overflow-y-auto p-6 animate-in slide-in-from-right duration-300">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border sticky top-0 bg-white">
           <h2 className="text-xl font-semibold text-text">{task.name}</h2>

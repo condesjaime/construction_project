@@ -35,6 +35,10 @@ npm install @aws-sdk/client-s3
 1. Make sure the docker is running then navigate to app directory cd to construction_project
 2. run -> docker-compose up -d -> for starting the postgres server, redis and minio
 3. open a browser for minio server http://localhost:9001 and create a   bucket "uploads" use the credentials above for user and password
+run: docker exec -it minio mc alias set local http://localhost:9000 admin password123 
+
+make the uploads bucket public run: docker exec -it minio mc anonymous set public local/uploads
+
 4. navigate to app folder -> cd to construction_project
 5. run -> npx drizzle-kit generate 
 6. run -> npx drizzle-kit migrate or npx drizzle-kit push 

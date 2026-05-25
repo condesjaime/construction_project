@@ -27,13 +27,14 @@ interface TaskModalProps {
   onClose: () => void;
 }
 
-export function CreateTaskModal({isOpen, onClose }: TaskModalProps) {
+export function CreateSubTaskModal({isOpen, onClose }: TaskModalProps) {
   
 
   if (!isOpen) return null;
 
    const [taskFormData, setTaskFormData] = useState({
     projectId: '',
+    taskId: '',
     teamIds: [] as string[],
     name: '',
     description: '',
@@ -50,11 +51,14 @@ export function CreateTaskModal({isOpen, onClose }: TaskModalProps) {
   const [loading, setLoading] = useState(true);
   const [isMilestone, setIsMilestone] = useState(false);
   const [estimatedDays, setEstimatedDays] = useState(0);
+  const [parentTasks, setParentTasks] = useState<any[]>([]);
 
   useEffect(() => {
+
     getProjects();
+    getParentTasks(taskFormData.projectId);
     getTeams();
-  }, []);
+  }, [taskFormData.projectId]);
  
   const getTeams = async () => {
     try {
@@ -66,7 +70,18 @@ export function CreateTaskModal({isOpen, onClose }: TaskModalProps) {
       console.error('Error fetching teams:', error);
     }
   };
-  const getProjects = async () => {
+  const getParentTasks = async (projectId: string) => {
+    try {
+      const response = await fetch(`/api/tasks?projectId=${projectId}`);
+        const data = await response.json();
+        console.log('Fetched parent tasks:', data);
+        setParentTasks(data);
+    } catch (error) {
+      console.error('Error fetching parent tasks:', error);
+    }
+    };
+
+ const getProjects = async () => {
     try {
       const response = await fetch('/api/projects');
         const data = await response.json();
@@ -78,7 +93,19 @@ export function CreateTaskModal({isOpen, onClose }: TaskModalProps) {
     };
 
   const handleSubmit = async () => {
-  console.log('Submitting task:', taskFormData);
+  console.log('Submitting subtask:', taskFormData);
+  if(!taskFormData.name){
+    toast.error('Please enter a subtask name');
+    return;
+  }
+  if(!taskFormData.projectId){
+    toast.error('Please select a project');
+    return;
+  }
+  if(!taskFormData.taskId){
+    toast.error('Please select a parent task');
+    return;
+  }
 
   const start = new Date(taskFormData.startDate);
   const end = new Date(taskFormData.endDate);
@@ -98,7 +125,7 @@ export function CreateTaskModal({isOpen, onClose }: TaskModalProps) {
   }
 
   try {
-    const response = await fetch('/api/tasks', {
+    const response = await fetch('/api/subtasks', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -107,18 +134,18 @@ export function CreateTaskModal({isOpen, onClose }: TaskModalProps) {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to create task');
+      throw new Error('Failed to create subtask');
       
     }
 
     const data = await response.json();
-     toast.success('Task created successfully');
-    console.log('Created task:', data);
+     toast.success('Subtask created successfully');
+    console.log('Created subtask:', data);
 
     onClose();
   } catch (error) {
-    toast.error('Failed to create task');
-    console.error('Error submitting task:', error);
+    toast.error('Failed to create subtask');
+    console.error('Error submitting subtask:', error);
   }
 };
   return (
@@ -126,7 +153,7 @@ export function CreateTaskModal({isOpen, onClose }: TaskModalProps) {
       <div className="bg-white h-full w-full max-w-md shadow-xl overflow-y-auto p-6 animate-in slide-in-from-right duration-300">
         {/* Header */}
         <div className="flex justify-between border-b border-border ">
-          <div>Create Task</div>
+          <div>Create Sub-Task</div>
           <button
             onClick={onClose}
             className="p-2 hover:bg-surface-alt rounded-lg transition-colors"
@@ -139,7 +166,7 @@ export function CreateTaskModal({isOpen, onClose }: TaskModalProps) {
         <div className="mt-3">
           {/* Project and Team */}
           <div className="flex flex-col">
-            <div className="text-sm text-text-muted">Task Name</div>
+            <div className="text-sm text-text-muted">Sub-Task Name <span className="text-red-500">*</span></div>
             <input
             type="text"
             value={taskFormData.name}
@@ -147,9 +174,8 @@ export function CreateTaskModal({isOpen, onClose }: TaskModalProps) {
             className="border border-border rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           </div>  
-          
           <div>
-            <div className="text-sm text-text-muted mb-2">Project</div>
+            <div className="text-sm text-text-muted mb-2">Project <span className="text-red-500">*</span></div>
             <div className="text-sm font-medium text-text">
               <select name="project" id="project" 
               className="w-full border border-border rounded-lg px-3 py-2 bg-white flex items-center justify-between text-left"
@@ -161,6 +187,27 @@ export function CreateTaskModal({isOpen, onClose }: TaskModalProps) {
                   <option key={project.id} value={project.id}>{project.name}</option>
                 ))}
               </select>
+            </div>
+          </div>
+          <div>
+            <div className="text-sm text-text-muted mb-2">Parent Task <span className="text-red-500">*</span></div>
+            <div className="text-sm font-medium text-text">
+              <select name="parentTask" id="parentTask" 
+              className="w-full border border-border rounded-lg px-3 py-2 bg-white flex items-center justify-between text-left"
+              onChange={
+                (e) => setTaskFormData({...taskFormData, taskId: e.target.value})
+              }
+              ><option key={0} value={""}>Select Parent Task</option>
+                
+                {taskFormData.projectId && parentTasks.filter((t) => t.projectId === taskFormData.projectId).map((task) => (
+                  <option key={task.id} value={task.id}>{task.name}</option>
+                ))}
+              </select>
+              {!taskFormData.projectId && (
+                <p className="text-sm text-text-muted">
+                  Please select a project to view its tasks.
+                </p>
+              )}
             </div>
           </div>
 

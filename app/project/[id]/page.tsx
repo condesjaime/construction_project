@@ -40,7 +40,7 @@ export default function ProjectPage({ params }: ProjectPageProps) {
    const [project, setProject] = useState<any>(null);
    const [tasks, setTasks] = useState<GanttTask[]>([]);
    const [diaryEntries, setDiaryEntries] = useState<DiaryEntry[]>([]);
-   
+   const [rawtasks, setRawtasks]=useState<any>([]);
   useEffect(() => {
     if(id){
        fetchProject(id);
@@ -82,7 +82,7 @@ const fetchTasks = async (projectId: string) => {
     const response = await fetch(`/api/tasks?projectId=${projectId}`);
 
     const data = await response.json();
-    
+    setRawtasks(data);
     const formattedTasks: GanttTask[] = data.map((task: any) => ({
       id: task.id,
       projectId: task.projectId,
@@ -347,7 +347,7 @@ const milestoneCount = useMemo(
             {showDiaryForm ? (
               <DiaryEntryForm
                 pageName='project'
-                tasksData={tasks}
+                tasksData={rawtasks}
                 onSubmit={saveDiaryEntry}
                 onCancel={() => setShowDiaryForm(false)}
               />

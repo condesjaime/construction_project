@@ -51,7 +51,11 @@ export const projects = pgTable(
     startDate: date('start_date'),
     endDate: date('end_date'),
     client: varchar('client', { length: 255 }),
-    location: varchar('location', { length: 255 }),
+    addressLine1: varchar('address_line1', { length: 255 }),
+    addressLine2: varchar('address_line2', { length: 255 }),
+    city: varchar('city', { length: 255 }),
+    state: varchar('state', { length: 255 }),
+    zipCode: varchar('zip_code', { length: 20 }),
     color: varchar('color', { length: 50 }).default('p1'),
     progress: decimal('progress', { precision: 5, scale: 2 }).default('0'),
     createdAt: timestamp('created_at').defaultNow(),
@@ -76,6 +80,57 @@ export const teams = pgTable(
     updatedAt: timestamp('updated_at').defaultNow(),
   }
 );
+export const tasksAssignment = pgTable(
+  'tasks_assignment',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    taskId: uuid('task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    teamId: uuid('team_id')
+      .notNull()
+      .references(() => teams.id, { onDelete: 'restrict' }),
+    sortOrder: integer('sort_order').default(0),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+  },
+  (table) => ({
+    projectIdIdx: index('tasks_assignment_project_id_idx').on(table.projectId),
+    teamIdIdx: index('tasks_assignment_team_id_idx').on(table.teamId),
+    tasksIdx: index('tasks_assignment_task_id_idx').on(table.taskId),
+  })
+);
+
+export const subtasksAssignment = pgTable(
+  'subtasks_assignment',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    subtaskId: uuid('subtask_id')
+      .notNull()
+      .references(() => subtasks.id, { onDelete: 'cascade' }),
+    parent_TaskId: uuid('task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    teamId: uuid('team_id')
+      .notNull()
+      .references(() => teams.id, { onDelete: 'restrict' }),
+    sortOrder: integer('sort_order').default(0),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+  },
+  (table) => ({
+    projectIdIdx: index('subtasks_assignment_project_id_idx').on(table.projectId),
+    teamIdIdx: index('subtasks_assignment_team_id_idx').on(table.teamId),
+    subtasksIdx: index('subtasks_assignment_subtask_id_idx').on(table.subtaskId),
+    parentTasksIdx: index('subtasks_assignment_parent_task_id_idx').on(table.parent_TaskId),
+  })
+);
 
 export const tasks = pgTable(
   'tasks',
@@ -84,9 +139,6 @@ export const tasks = pgTable(
     projectId: uuid('project_id')
       .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
-    teamId: uuid('team_id')
-      .notNull()
-      .references(() => teams.id, { onDelete: 'restrict' }),
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
     status: taskStatusEnum('status').notNull().default('planned'),
@@ -101,7 +153,6 @@ export const tasks = pgTable(
   },
   (table) => ({
     projectIdIdx: index('tasks_project_id_idx').on(table.projectId),
-    teamIdIdx: index('tasks_team_id_idx').on(table.teamId),
     dateRangeIdx: index('tasks_date_range_idx').on(table.startDate, table.endDate),
   })
 );
@@ -113,17 +164,24 @@ export const subtasks = pgTable(
     taskId: uuid('task_id')
       .notNull()
       .references(() => tasks.id, { onDelete: 'cascade' }),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
     status: taskStatusEnum('status').notNull().default('planned'),
     startDate: date('start_date').notNull(),
     endDate: date('end_date').notNull(),
+    estimatedDays: integer('estimated_days'),
+    notes: text('notes'),
+    isMilestone: boolean('is_milestone').default(false),
     sortOrder: integer('sort_order').default(0),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
   },
   (table) => ({
     taskIdIdx: index('subtasks_task_id_idx').on(table.taskId),
+    projectIdIdx: index('subtasks_project_id_idx').on(table.projectId),
   })
 );
 
@@ -137,10 +195,13 @@ export const diaryEntries = pgTable(
     taskId: uuid('task_id')
       .notNull()
       .references(() => tasks.id, { onDelete: 'set null' }),
+    subtaskId: uuid('subtask_id')
+      .references(() => subtasks.id, { onDelete: 'set null' }),  
     entryDate: date('entry_date').notNull(),
     title: varchar('title', { length: 255 }),
     notes: text('notes'),
     photos: jsonb('photos').$type<string[]>().default([]), // JSON stringified array of photo URLs
+    videos: jsonb('videos').$type<string[]>().default([]), // JSON stringified array of video URLs
     status: entryStatusEnum('status').notNull().default('published'),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
@@ -192,13 +253,17 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
     fields: [tasks.projectId],
     references: [projects.id],
   }),
-  team: one(teams, {
-    fields: [tasks.teamId],
-    references: [teams.id],
-  }),
+  team_assignment: many(tasksAssignment),
   subtasks: many(subtasks),
   diaryEntries: many(diaryEntries),
   notifications: many(taskNotifications),
+}));
+
+export const tasksAssignmentRelations = relations(tasksAssignment, ({ one }) => ({
+  task: one(tasks, {
+    fields: [tasksAssignment.taskId],
+    references: [tasks.id],
+  }),
 }));
 
 export const subtasksRelations = relations(subtasks, ({ one }) => ({

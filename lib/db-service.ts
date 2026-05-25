@@ -1,5 +1,5 @@
 import { db } from '@/db';
-import { NewProject, projects, tasks, subtasks, diaryEntries, taskNotifications, teams } from '@/db/schema';
+import { NewProject, projects, tasks, subtasks, diaryEntries, taskNotifications, teams, tasksAssignment,subtasksAssignment } from '@/db/schema';
 import { eq, desc, and, between, gte, lte } from 'drizzle-orm';
 
 
@@ -35,7 +35,11 @@ export async function createProject(data: NewProject) {
     startDate: data.startDate || null,
     endDate: data.endDate || null,
     client: data.client,
-    location: data.location,
+    addressLine1: data.addressLine1,
+    addressLine2: data.addressLine2,
+    city: data.city,
+    state: data.state,
+    zipCode: data.zipCode,
     color: data.color || 'p1',
     progress: data.progress || '0.00',
   };
@@ -52,7 +56,11 @@ export async function updateProject(id: string, data: Partial<{
   name: string;
   description?: string;
   client?: string;
-  location?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
   startDate?: Date;
   endDate?: Date;
   color?: string;
@@ -71,6 +79,146 @@ export async function updateProject(id: string, data: Partial<{
   return result[0];
 }
 
+// SubTasks
+export async function getSubTasks(filters?: {
+  taskId?: string;
+  projectId?: string;
+  startDate?: Date;
+  endDate?: Date;
+  status?: 'planned' | 'in_progress' | 'done' | 'milestone' | 'blocked';
+}) {
+  const conditions = [];
+  
+  if (filters?.projectId) {
+    conditions.push(eq(subtasks.projectId, filters.projectId));
+  }
+  if (filters?.taskId) {
+    conditions.push(eq(subtasks.taskId, filters.taskId));
+  }
+ 
+
+  return db.query.subtasks.findMany({
+    where: conditions.length > 0 ? and(...conditions) : undefined,
+    with: {
+      project: true,
+      task: true,
+    },
+  });
+}
+
+export async function createSubTask(data: any) {
+  const startDate = new Date(data.startDate);
+  const endDate = new Date(data.endDate);
+
+  const result = await db.insert(subtasks).values({
+    taskId: data.taskId,
+    projectId: data.projectId,
+    name: data.name,
+    description: data.description,
+    status: data.status || 'planned',
+    startDate: startDate.toISOString().split('T')[0],
+    endDate: endDate.toISOString().split('T')[0],
+    estimatedDays: data.estimatedDays,
+    notes: data.notes,
+    isMilestone: data.isMilestone || false,
+    sortOrder: data.sortOrder || 0,
+  }).returning();
+
+  const createdTask = result[0];
+
+  // Insert task assignments
+  if (data.teamIds && Array.isArray(data.teamIds)) {
+    const assignmentRows = data.teamIds.map((teamId: string) => ({
+      subtaskId: createdTask.id,
+      parent_TaskId: data.taskId,
+      projectId: data.projectId,
+      teamId,
+    }));
+
+    await db.insert(subtasksAssignment).values(assignmentRows);
+  }
+
+  return createdTask;
+}
+
+export async function updateSubTask(
+  id: string,
+  data: Partial<{
+    projectId?: string;
+    taskId?: string;
+    name?: string;
+    description?: string;
+    status?: 'planned' | 'in_progress' | 'done' | 'milestone' | 'blocked';
+    startDate?: string;
+    endDate?: string;
+    estimatedDays?: number;
+    notes?: string;
+    isMilestone?: boolean;
+    teamIds?: string[];
+  }>
+) {
+  const updateData: any = {};
+  const updateAssignments = data.teamIds ? { teamIds: data.teamIds } : null;
+  
+
+  if (data.projectId !== undefined)
+    updateData.projectId = data.projectId;
+
+  if (data.taskId !== undefined)
+    updateData.taskId = data.taskId;
+
+  if (data.name !== undefined)
+    updateData.name = data.name;
+
+  if (data.description !== undefined)
+    updateData.description = data.description;
+
+  if (data.status !== undefined)
+    updateData.status = data.status;
+
+  if (data.startDate !== undefined) {
+    updateData.startDate = new Date(data.startDate)
+      .toISOString()
+      .split('T')[0];
+  }
+
+  if (data.endDate !== undefined) {
+    updateData.endDate = new Date(data.endDate)
+      .toISOString()
+      .split('T')[0];
+  }
+
+  if (data.estimatedDays !== undefined)
+    updateData.estimatedDays = data.estimatedDays;
+
+  if (data.notes !== undefined)
+    updateData.notes = data.notes;
+
+  if (data.isMilestone !== undefined)
+    updateData.isMilestone = data.isMilestone;
+
+  updateData.updatedAt = new Date();
+
+  const result = await db
+    .update(subtasks)
+    .set(updateData)
+    .where(eq(subtasks.id, id))
+    .returning();
+
+  if (updateAssignments) {
+    // First delete existing assignments
+    await db.delete(subtasksAssignment).where(eq(subtasksAssignment.subtaskId, id));
+    await db.insert(subtasksAssignment).values(
+      updateAssignments.teamIds.map((teamId: string) => ({
+        subtaskId: id,
+        parent_TaskId: data.taskId!,
+        projectId: data.projectId!,
+        teamId,
+      }))
+    );
+  }
+  return result[0];
+}
 
 // Tasks
 export async function getTasks(filters?: {
@@ -85,15 +233,13 @@ export async function getTasks(filters?: {
   if (filters?.projectId) {
     conditions.push(eq(tasks.projectId, filters.projectId));
   }
-  if (filters?.teamId) {
-    conditions.push(eq(tasks.teamId, filters.teamId));
-  }
+ 
   
   return db.query.tasks.findMany({
     where: conditions.length > 0 ? and(...conditions) : undefined,
     with: {
       project: true,
-      team: true,
+      team_assignment: true,
       subtasks: true,
     },
   });
@@ -105,28 +251,38 @@ export async function createTask(data: any) {
 
   const result = await db.insert(tasks).values({
     projectId: data.projectId,
-    teamId: data.teamId,
     name: data.name,
     description: data.description,
     status: data.status || 'planned',
-
     startDate: startDate.toISOString().split('T')[0],
     endDate: endDate.toISOString().split('T')[0],
-
     estimatedDays: data.estimatedDays,
     notes: data.notes,
     isMilestone: data.isMilestone || false,
     sortOrder: data.sortOrder || 0,
   }).returning();
 
-  return result[0];
+  const createdTask = result[0];
+
+  // Insert task assignments
+  if (data.teamIds && Array.isArray(data.teamIds)) {
+    const assignmentRows = data.teamIds.map((teamId: string) => ({
+      taskId: createdTask.id,
+      projectId: data.projectId,
+      teamId,
+    }));
+
+    await db.insert(tasksAssignment).values(assignmentRows);
+  }
+
+  return createdTask;
 }
 
 export async function updateTask(
   id: string,
   data: Partial<{
     projectId?: string;
-    teamId?: string;
+    teamIds?: string[];
     name?: string;
     description?: string;
     status?: 'planned' | 'in_progress' | 'done' | 'milestone' | 'blocked';
@@ -138,12 +294,11 @@ export async function updateTask(
   }>
 ) {
   const updateData: any = {};
+  const updateAssignments = data.teamIds ? { teamIds: data.teamIds } : null;
 
   if (data.projectId !== undefined)
     updateData.projectId = data.projectId;
 
-  if (data.teamId !== undefined)
-    updateData.teamId = data.teamId;
 
   if (data.name !== undefined)
     updateData.name = data.name;
@@ -183,15 +338,31 @@ export async function updateTask(
     .where(eq(tasks.id, id))
     .returning();
 
+  if(updateAssignments){
+    // First delete existing assignments
+    await db.delete(tasksAssignment).where(eq(tasksAssignment.taskId, id));
+    await db.insert(tasksAssignment).values(
+      updateAssignments.teamIds.map((teamId: string) => ({
+        taskId: id,
+        projectId: data.projectId!,
+        teamId,
+      }))
+    );
+  }
   return result[0];
 }
 
 export async function deleteTask(id: string) {
+  db.delete(tasksAssignment).where(eq(tasksAssignment.taskId, id));
   return db.delete(tasks).where(eq(tasks.id, id));
 }
-
+export async function deleteSubTask(id: string) {
+  db.delete(subtasksAssignment).where(eq(subtasksAssignment.subtaskId, id));
+  return db.delete(subtasks).where(eq(subtasks.id, id));
+}
 // Subtasks
 export async function createSubtask(data: {
+  projectId: string;
   taskId: string;
   name: string;
   description?: string;
@@ -200,6 +371,7 @@ export async function createSubtask(data: {
   endDate: Date;
 }) {
   const result = await db.insert(subtasks).values({
+    projectId: data.projectId,
     taskId: data.taskId,
     name: data.name,
     description: data.description,
@@ -211,6 +383,7 @@ export async function createSubtask(data: {
 }
 
 export async function updateSubtask(id: string, data: Partial<{
+  projectId?: string;
   taskId?: string;
   name?: string;
   description?: string;
@@ -219,6 +392,8 @@ export async function updateSubtask(id: string, data: Partial<{
   endDate?: Date;
 }>) {
   const updateData: any = {};
+  
+  if (data.projectId !== undefined) updateData.projectId = data.projectId;
   if (data.taskId !== undefined) updateData.taskId = data.taskId;
   if (data.name !== undefined) updateData.name = data.name;
   if (data.description !== undefined) updateData.description = data.description;
@@ -260,11 +435,13 @@ export async function getDiaryEntriesAll() {
 export async function createDiaryEntry(data: {
   projectId: string;
   taskId?: string;
+  subtaskId?: string;
   taskName?: string;
   date?: Date;
   title?: string;
   notes?: string;
   photos?: string[];
+  videos?: string[];
   status?: 'draft' | 'published';
 }) {
 
@@ -275,10 +452,12 @@ export async function createDiaryEntry(data: {
   const result = await db.insert(diaryEntries).values({
     projectId: data.projectId,
     taskId: data.taskId!,
+    subtaskId: data.subtaskId!,
     entryDate: formattedDate,
     title: data.title,
     notes: data.notes,
     photos: data.photos || [],
+    videos: data.videos || [],
     status: data.status || 'draft',
   }).returning();
   return result[0];
@@ -287,11 +466,13 @@ export async function createDiaryEntry(data: {
 export async function updateDiaryEntry(id: string, data: Partial<{
   projectId?: string;
   taskId?: string;
+  subtaskId?: string;
   entryDate?: Date;
   title?: string;
   notes?: string;
   status?: 'draft' | 'published';
   photos?: string[];
+  videos?: string[];
 }>) {
   const updateData: any = {};
   if (data.projectId !== undefined) updateData.projectId = data.projectId;
@@ -301,6 +482,8 @@ export async function updateDiaryEntry(id: string, data: Partial<{
   if (data.notes !== undefined) updateData.notes = data.notes;
   if (data.status !== undefined) updateData.status = data.status;
   if (data.photos !== undefined) updateData.photos = data.photos;
+  if (data.videos !== undefined) updateData.videos = data.videos;
+  if (data.subtaskId !== undefined) updateData.subtaskId = data.subtaskId;
   updateData.updatedAt = new Date();
 
   const result = await db
@@ -359,11 +542,7 @@ export async function getNotifications(filters?: {
 
 // Teams
 export async function getTeams() {
-  return db.query.teams.findMany({
-    with: {
-      tasks: true,
-    },
-  });
+  return db.query.teams.findMany();
 }
 
 export async function getTeamsById(id : string) {

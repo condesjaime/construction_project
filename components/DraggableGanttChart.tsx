@@ -115,7 +115,7 @@ export function DraggableGanttChart({
   const dates = useMemo(() => flattenDates(weeks), [weeks]);
   const totalDays = dates.length;
   const totalWeeks = Math.ceil(totalDays / 7);
-
+  
   const today = new Date();
   const todayIdx = useMemo(() => {
     for (let i = 0; i < dates.length; i++) if (sameDay(dates[i], today)) return i;
@@ -257,34 +257,97 @@ export function DraggableGanttChart({
   // ===== Drag / resize state =====
   type DragMode = 'move' | 'resize-start' | 'resize-end';
   const dragRef = useRef<{
-    taskId: string;
-    mode: DragMode;
-    startX: number;
-    origStart: Date;
-    origEnd: Date;
-  } | null>(null);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
+  taskId: string;
+  mode: DragMode;
+  startX: number;
+  origStart: Date;
+  origEnd: Date;
+  initialLeft: number;
+  initialWidth: number;
+  top?: number;
+} | null>(null);
 
-  const handlePointerDown = (e: React.PointerEvent, task: TaskData, mode: DragMode) => {
-    e.preventDefault();
-    e.stopPropagation();
-    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
-    dragRef.current = {
-      taskId: task.id,
-      mode,
-      startX: e.clientX,
-      origStart: new Date(task.startDate),
-      origEnd: new Date(task.endDate),
-    };
-    setDraggingId(task.id);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragPreview, setDragPreview] = useState<{
+  left: number;
+  width: number;
+  top?: number;
+} | null>(null);
+
+const [hoveredTask, setHoveredTask] = useState<string | null>(null);
+  
+const handlePointerDown = (
+  e: React.PointerEvent,
+  task: TaskData,
+  mode: DragMode,
+  left: number,
+  width: number,
+  top?: number
+) => {
+  e.preventDefault();
+  e.stopPropagation();
+
+  (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+
+  dragRef.current = {
+    taskId: task.id,
+    mode,
+    startX: e.clientX,
+    origStart: new Date(task.startDate),
+    origEnd: new Date(task.endDate),
+    initialLeft: left,
+    initialWidth: width,
+    top,
   };
+
+  setDraggingId(task.id);
+
+  setDragPreview({
+    left,
+    width,
+    top,
+  });
+};
 
   useEffect(() => {
     if (!draggingId) return;
     const onMove = (e: PointerEvent) => {
-      if (!dragRef.current) return;
-      document.body.style.cursor = 'grabbing';
-    };
+  if (!dragRef.current) return;
+
+  const {
+    mode,
+    startX,
+    initialLeft,
+    initialWidth,
+    top,
+  } = dragRef.current;
+
+  const deltaDays = Math.round((e.clientX - startX) / DAY_W);
+
+  let left = initialLeft;
+  let width = initialWidth;
+
+  if (mode === 'move') {
+    left = initialLeft + deltaDays * DAY_W;
+  }
+
+  if (mode === 'resize-end') {
+    width = Math.max(DAY_W, initialWidth + deltaDays * DAY_W);
+  }
+
+  if (mode === 'resize-start') {
+    left = initialLeft + deltaDays * DAY_W;
+    width = Math.max(DAY_W, initialWidth - deltaDays * DAY_W);
+  }
+
+  setDragPreview({
+    left,
+    width,
+    top,
+  });
+
+  document.body.style.cursor = 'grabbing';
+};
     const onUp = (e: PointerEvent) => {
       if (!dragRef.current) return;
       const { taskId, mode, startX, origStart, origEnd } = dragRef.current;
@@ -303,8 +366,10 @@ export function DraggableGanttChart({
       }
       if (deltaDays !== 0) onTaskReschedule(taskId, newStart, newEnd);
       document.body.style.cursor = '';
+      setDragPreview(null);
       dragRef.current = null;
       setDraggingId(null);
+      
     };
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
@@ -402,6 +467,7 @@ export function DraggableGanttChart({
                         <span className="project-meta">{proj.tasks.length} tasks</span>
                       </div>
                       <div className="row-timeline" style={{ width: totalDays * DAY_W + 'px' }}>
+                        
                         {renderWeekendStripes()}
                         <div
                           className={`bar bar-project${proj.clippedRight ? ' bar-clipped-right' : ''}`}
@@ -437,6 +503,19 @@ export function DraggableGanttChart({
                             </div>
                           </div>
                           <div className="row-timeline" style={{ width: totalDays * DAY_W + 'px' }}>
+                           {dragPreview && draggingId === task.id && (
+                            <div
+                              className="drag-preview-bar"
+                              style={{
+                                left: dragPreview.left + 'px',
+                                width: dragPreview.width + 'px',
+                                top:
+                                  dragPreview.top !== undefined
+                                    ? dragPreview.top + 'px'
+                                    : undefined,
+                              }}
+                            />
+                          )}
                             {renderWeekendStripes()}
                             {isMilestone ? (
                               <button
@@ -451,18 +530,49 @@ export function DraggableGanttChart({
                                 className={`bar bar-task${clippedRight ? ' bar-clipped-right' : ''}${hasConflict ? ' has-conflict' : ''}`}
                                 style={{ left: s * DAY_W + 'px', width: w * DAY_W + 'px' }}
                                 data-tooltip={`${task.name} · ${task.teamName} · ${fmtDateLong(task.startDate)} → ${fmtDateLong(task.endDate)}${hasConflict ? ' · ⚠ conflict' : ''}`}
-                                onPointerDown={(ev) => handlePointerDown(ev, task, 'move')}
+                                onPointerDown={(ev) =>
+                                  handlePointerDown(
+                                    ev,
+                                    task,
+                                    'move',
+                                    s * DAY_W,
+                                    w * DAY_W
+                                  )
+                                }
                                 onClick={() => onTaskClick(task)}
+                                onMouseEnter={() => setHoveredTask(task.id)}
+                                onMouseLeave={() => setHoveredTask(null)}
                               >
+                                {hoveredTask === task.id && (
+                                  <div className="task-hover-tooltip">
+                                    Drag or Resize Task
+                                  </div>
+                                )}
                                 <div
                                   className="bar-resize left"
-                                  onPointerDown={(ev) => handlePointerDown(ev, task, 'resize-start')}
+                                  onPointerDown={(ev) =>
+                                  handlePointerDown(
+                                    ev,
+                                    task,
+                                    'resize-start',
+                                    s * DAY_W,
+                                    w * DAY_W
+                                  )
+                                }
                                 />
                                 <div className="bar-progress" style={{ width: progressPct(s, e) + '%' }} />
                                 <span className="bar-content">{task.name}</span>
                                 <div
                                   className="bar-resize right"
-                                  onPointerDown={(ev) => handlePointerDown(ev, task, 'resize-end')}
+                                  onPointerDown={(ev) =>
+                                  handlePointerDown(
+                                    ev,
+                                    task,
+                                    'resize-end',
+                                    s * DAY_W,
+                                    w * DAY_W
+                                  )
+                                }
                                 />
                               </div>
                             )}
@@ -510,9 +620,23 @@ export function DraggableGanttChart({
                       </div>
                     </div>
                     <div className="row-timeline" style={{ width: totalDays * DAY_W + 'px' }}>
+                      {dragPreview && (
+                            <div
+                              className="drag-preview-bar"
+                              style={{
+                                left: dragPreview.left + 'px',
+                                width: dragPreview.width + 'px',
+                                top:
+                                  dragPreview.top !== undefined
+                                    ? dragPreview.top + 'px'
+                                    : undefined,
+                              }}
+                            />
+                          )}
                       {renderWeekendStripes()}
                       {team.tasks.map(({ task, start, end, lane, hasConflict, clippedRight }) => {
                         const w = Math.max(1, end - start + 1);
+                        const topPos = topOffset + lane * (BAR_HEIGHT + BAR_GAP);
                         const isMilestone = task.isMilestone || task.status === 'milestone';
                         if (isMilestone) {
                           return (
@@ -540,18 +664,52 @@ export function DraggableGanttChart({
                               transform: 'none',
                             }}
                             data-tooltip={`${task.projectName} · ${task.name} · ${fmtDateLong(task.startDate)} → ${fmtDateLong(task.endDate)}${hasConflict ? ' · ⚠ conflict' : ''}`}
-                            onPointerDown={(ev) => handlePointerDown(ev, task, 'move')}
+                            onPointerDown={(ev) =>
+                            handlePointerDown(
+                              ev,
+                              task,
+                              'move',
+                              start * DAY_W,
+                              w * DAY_W,
+                              topPos
+                            )
+                          }
                             onClick={() => onTaskClick(task)}
+                            onMouseEnter={() => setHoveredTask(task.id)}
+                                onMouseLeave={() => setHoveredTask(null)}
                           >
+                             {hoveredTask === task.id && (
+                                  <div className="task-hover-tooltip">
+                                    Drag or Resize Task
+                                  </div>
+                                )}
                             <div
                               className="bar-resize left"
-                              onPointerDown={(ev) => handlePointerDown(ev, task, 'resize-start')}
+                              onPointerDown={(ev) =>
+                              handlePointerDown(
+                                ev,
+                                task,
+                                'resize-start',
+                                start * DAY_W,
+                                w * DAY_W,
+                                topPos
+                              )
+                            }
                             />
                             <div className="bar-progress" style={{ width: progressPct(start, end) + '%' }} />
                             <span className="bar-content">{task.projectName} · {task.name}</span>
                             <div
                               className="bar-resize right"
-                              onPointerDown={(ev) => handlePointerDown(ev, task, 'resize-end')}
+                              onPointerDown={(ev) =>
+                              handlePointerDown(
+                                ev,
+                                task,
+                                'resize-end',
+                                start * DAY_W,
+                                w * DAY_W,
+                                topPos
+                              )
+                            }
                             />
                           </div>
                         );

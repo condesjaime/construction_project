@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, use } from 'react';
 import { TopBar } from '@/components/TopBar';
+import { X} from 'lucide-react';
 import { Plus, Edit2, Trash2, ChevronDown } from 'lucide-react';
 import { DiaryEntryForm } from '@/components/DiaryEntryForm';
 import { type TaskData as GanttTask } from '@/components/GanttChart';
@@ -40,6 +41,12 @@ interface DiaryEntry {
   }[]; // Assuming photos is an array of objects with url and type 
 }
 
+interface UploadedFile {
+  key?: string;
+  url?: string;
+  name?: string;
+  type?: string;
+}
 
 // const mockEntries: DiaryEntry[] = [
 //   {
@@ -83,6 +90,7 @@ export default function DiaryPage() {
     fetchProjects();
     fetchTasks();
  }, []);
+ const [selectedMedia, setSelectedMedia] = useState<UploadedFile | null>(null);
  const fetchTasks = async () => {
    try {
      const response = await fetch(`/api/tasks`);
@@ -246,7 +254,23 @@ if(!diaryEntries){
                                   {formatDate(entry.entryDate, 'MM dd, yyyy')}
                                 </div>
                                 <div className="text-sm text-text-muted mt-1">
-                                  {entry.title}
+                                  <div className='flex justify-start'>
+                                  <span className="text-md text-text py-2 px-3 rounded-full bg-slate-100">Project: {entry.project.name}</span>
+
+                                  </div>
+                                  
+                                  <div className="flex items-center gap-3">
+                                  <div className="flex-1 h-2 bg-surface-alt border border-border rounded-full overflow-hidden">
+                                    <div
+                                      className={`h-full app-bg-lime`}
+                                      style={{ width: `${entry.project.progress}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-sm font-mono text-text-muted min-w-12 text-right">
+                                    {entry.project.progress}%
+                                  </span>
+                                </div>
+                                 <div></div>
                                 </div>
                               </div>
                             </div>
@@ -270,49 +294,58 @@ if(!diaryEntries){
                         {expandedEntry === entry.id && (
                           <div className="px-4 pb-4 border-t border-border">
                             {/* Notes */}
-                            <p className="text-md text-text py-2">Project: {entry.project.name}</p>
-                            <p className="text-md text-text py-2">Task: {entry.task.name}</p>
+                            
                             <p className="text-sm text-text py-2">Notes: {entry.notes}</p>
 
                             {/* Media preview */}
                             {entry.photos.length > 0 && (
-                              <div>
-                                <div className="text-xs text-text-muted font-semibold mb-3 uppercase">
-                                  Media
-                                </div>
-                                <div className="flex gap-2 mb-4">
-                                  {entry.photos.length > 0 && (
-                                  <div className="flex justify-start gap-3 mt-4">
-                                    {entry.photos.map((photo, index) => {
-                                      const isImage = photo.type?.startsWith('image');
-                                                                    
-                                      return (
-                                        <div
-                                          key={index}
-                                          className="relative w-40 border border-border rounded-lg overflow-hidden"
-                                        >
-                                          {isImage ? (
-                                            <div className="relative h-32 w-full hover:border-2 border-lime-500">
-                                              <Image
-                                                src={photo.url ?? ''}
-                                                alt={photo.name ?? 'Photo'}
-                                                fill
-                                                className="object-cover"
-                                              />
+                                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-4">
+                                        {entry.photos.map((photo, index) => {
+                                          const isImage = photo?.type?.startsWith('image');
+                                          const isVideo = photo?.type?.startsWith('video');
+                            
+                                          return (
+                                            <div
+                                              key={index}
+                                              onClick={() => setSelectedMedia(photo)}
+                                              className="relative border border-border rounded-lg overflow-hidden bg-black cursor-pointer group"
+                                            >
+                                              {isImage && (
+                                                <div className="relative h-32 w-full">
+                                                  <Image
+                                                    src={photo.url ?? ''}
+                                                    alt={photo.name ?? ''}
+                                                    fill
+                                                    className="object-cover"
+                                                  />
+                                                </div>
+                                              )}
+                            
+                                              {isVideo && (
+                                                <>
+                                                  <video
+                                                    src={photo.url}
+                                                    className="h-32 w-full object-cover"
+                                                    muted
+                                                    preload="metadata"
+                                                  />
+                            
+                                                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                                    <div className="bg-white/90 rounded-full p-3">
+                                                      ▶
+                                                    </div>
+                                                  </div>
+                                                </>
+                                              )}
+                            
+                                              <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs px-2 py-1 truncate">
+                                                {photo.name}
+                                              </div>
                                             </div>
-                                          ) : (
-                                            <div className="h-32 flex items-center justify-center text-sm p-3 text-center">
-                                              {photo.name}
-                                            </div>
-                                         )}
-                                        </div>
-                                       );
-                                    })}
-                                   </div>
-                                )}
-                                </div>
-                              </div>
-                            )}
+                                          );
+                                        })}
+                                      </div>
+                                    )}
 
                             {/* Actions */}
                             <div className="flex gap-2 pt-4 border-t border-border">
@@ -339,6 +372,37 @@ if(!diaryEntries){
           )}
         </div>
       </div>
+      {selectedMedia && (
+      <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4">
+        <button
+          type="button"
+          onClick={() => setSelectedMedia(null)}
+          className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white rounded-full p-2"
+        >
+          <X size={24} />
+        </button>
+
+        <div className="max-w-6xl max-h-[90vh] w-full flex items-center justify-center">
+          {selectedMedia?.type?.startsWith('image') ? (
+            <div className="relative w-full h-[90vh]">
+              <Image
+                src={selectedMedia.url ?? ''}
+                alt={selectedMedia.name ?? ''}
+                fill
+                className="object-contain"
+              />
+            </div>
+          ) : (
+            <video
+              src={selectedMedia.url}
+              controls
+              autoPlay
+              className="max-h-[90vh] max-w-full rounded-lg"
+            />
+          )}
+        </div>
+      </div>
+    )}
     </div>
   );
 }

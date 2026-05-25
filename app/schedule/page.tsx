@@ -7,6 +7,7 @@ import { GanttChart, type TaskData as GanttTask } from '@/components/GanttChart'
 import { EnhancedTaskModal } from '@/components/EnhancedTaskModal';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import {CreateTaskModal} from '@/components/CreateTaskModal';
+import {CreateSubTaskModal} from '@/components/CreateSubTaskModal';
 import { formatDate, getThreeMonthsWeeks,formatOffsetDate,formatShortId,parseOffsetDate } from '@/lib/utils';
 import { toast } from 'sonner';
 interface TaskData {
@@ -32,7 +33,7 @@ export default function SchedulePage() {
   const [selectedTask, setSelectedTask] = useState<TaskData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
- 
+ const [createSubtaskModalOpen, setCreateSubtaskModalOpen] = useState(false);
   // Mock data — five projects with overlapping team assignments to surface conflicts
   const [mockTasks, setMockTasks] = useState<TaskData[]>([]);
  
@@ -166,12 +167,21 @@ export default function SchedulePage() {
         }
         breadcrumbs={[{ label: 'Schedule', href: '/schedule' }]}
         rightContent={
-             <button 
+            <div className="flex justify-between gap-2">
+           <button 
              onClick={()=>setCreateModalOpen(true)}
              className="px-4 py-2 app-bg-lime app-text-green rounded-lg text-sm font-medium hover:app-bg-lime/90 flex items-center gap-2">
                 <Plus size={16} />
                 New Task
             </button>
+
+            <button 
+             onClick={()=>setCreateSubtaskModalOpen(true)}
+             className="px-4 py-2 app-bg-lime app-text-green rounded-lg text-sm font-medium hover:app-bg-lime/90 flex items-center gap-2">
+                <Plus size={16} />
+                New Sub-Task
+            </button>
+            </div>
         }
       />
 
@@ -238,6 +248,16 @@ export default function SchedulePage() {
           isOpen={createModalOpen}
           onClose={() => {
             setCreateModalOpen(false);
+            getTasks(); // Refresh tasks after creating a new one
+        }}
+        />
+      )}
+
+      {createSubtaskModalOpen && (
+        <CreateSubTaskModal
+          isOpen={createSubtaskModalOpen}
+          onClose={() => {
+            setCreateSubtaskModalOpen(false);
             getTasks(); // Refresh tasks after creating a new one
         }}
         />

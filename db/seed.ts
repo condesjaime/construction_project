@@ -8,6 +8,8 @@ import {
   subtasks,
   diaryEntries,
   taskNotifications,
+  tasksAssignment,
+  subtasksAssignment,
 } from './schema';
 
 async function seed() {
@@ -25,7 +27,11 @@ async function seed() {
       startDate: '2026-01-01',
       endDate: '2026-12-31',
       client: 'John Doe Construction',
-      location: 'Cebu City',
+      addressLine1: 'Cebu City',
+      addressLine2: 'Mandaue City',
+      city: 'Cebu City',
+      state: 'Cebu',
+      zipCode: '6000',
       color: 'p1',
       progress: '30.00',
     },
@@ -37,7 +43,11 @@ async function seed() {
       startDate: '2026-02-01',
       endDate: '2026-10-30',
       client: 'ABC Holdings',
-      location: 'Mandaue City',
+      addressLine1: 'Mandaue City',
+      addressLine2: 'Cebu City',
+      city: 'Cebu City',
+      state: 'Cebu',
+      zipCode: '6000',
       color: 'p2',
       progress: '15.00',
     },
@@ -80,7 +90,6 @@ async function seed() {
     {
       id: 'b7c2d1e3-9a11-4b22-8000-300000000001',
       projectId: 'f3a1c9b0-1e2d-4c55-9a1b-100000000001',
-      teamId: 'a9d1b2c3-4e5f-4a11-9000-200000000001',
       name: 'Electrical Rough-In',
       description: 'Install conduits and wiring',
       status: 'in_progress',
@@ -94,7 +103,6 @@ async function seed() {
     {
       id: 'b7c2d1e3-9a11-4b22-8000-300000000002',
       projectId: 'f3a1c9b0-1e2d-4c55-9a1b-100000000001',
-      teamId: 'a9d1b2c3-4e5f-4a11-9000-200000000002',
       name: 'Plumbing Installation',
       description: 'Install pipes and drainage system',
       status: 'planned',
@@ -108,10 +116,9 @@ async function seed() {
     {
       id: 'b7c2d1e3-9a11-4b22-8000-300000000003',
       projectId: 'f3a1c9b0-1e2d-4c55-9a1b-100000000002',
-      teamId: 'a9d1b2c3-4e5f-4a11-9000-200000000003',
       name: 'Structural Framework',
       description: 'Steel framing and concrete works',
-      status: 'planned',
+      status: 'done',
       startDate: '2026-03-01',
       endDate: '2026-04-30',
       estimatedDays: 60,
@@ -119,6 +126,67 @@ async function seed() {
       isMilestone: true,
       sortOrder: 1,
     },
+     {
+      id: 'b7c2d1e3-9a11-4b22-8000-300000000004',
+      projectId: 'f3a1c9b0-1e2d-4c55-9a1b-100000000002',
+      name: 'Structural Framework',
+      description: 'Steel framing and concrete works',
+      status: 'blocked',
+      startDate: '2026-05-21',
+      endDate: '2026-06-30',
+      estimatedDays: 60,
+      notes: 'Critical milestone phase blocked',
+      isMilestone: true,
+      sortOrder: 1,
+    },
+  ]);
+
+
+  await db.insert(tasksAssignment).values([
+    {
+      id: 'f8a3e334-0b15-4f8e-b930-2cb2633f7ea7',
+      projectId: 'a1111111-1111-1111-1111-111111111111',
+      taskId: 'c3333333-3333-3333-3333-333333333333',
+      teamId: 'a9d1b2c3-4e5f-4a11-9000-200000000001',
+    },
+    {
+      id: 'afbdd29f-e490-4801-9a78-14c8ad2fd9f2',
+      projectId: 'a1111111-1111-1111-1111-111111111111',
+      taskId: 'c3333333-3333-3333-3333-333333333333',
+      teamId: 'b2222222-2222-2222-2222-222222222222',
+    },
+    {
+      id: '8e1b48c1-6739-49bf-8cd3-15805b3f1ce1',
+      projectId: 'a1111111-1111-1111-1111-111111111111',
+      taskId: 'c3333333-3333-3333-3333-333333333333',
+      teamId: 'b3333333-3333-3333-3333-333333333333',
+    },
+    
+  ]);
+
+  await db.insert(subtasksAssignment).values([
+    {
+      id: 'f8a3e334-0b15-4f8e-b930-2cb2633f7ea7',
+      subtaskId: 'c1d2e3f4-1111-4aaa-9000-400000000001',
+      parent_TaskId: 'b7c2d1e3-9a11-4b22-8000-300000000001',
+      projectId: 'a1111111-1111-1111-1111-111111111111',
+      teamId: 'a9d1b2c3-4e5f-4a11-9000-200000000001',
+    },
+    {
+      id: 'afbdd29f-e490-4801-9a78-14c8ad2fd9f2',
+      subtaskId: 'c1d2e3f4-1111-4aaa-9000-400000000001',
+      parent_TaskId: 'b7c2d1e3-9a11-4b22-8000-300000000001',
+      projectId: 'a1111111-1111-1111-1111-111111111111',
+      teamId: 'b2222222-2222-2222-2222-222222222222',
+    },
+    {
+      id: '8e1b48c1-6739-49bf-8cd3-15805b3f1ce1',
+      subtaskId: 'c1d2e3f4-1111-4aaa-9000-400000000001',
+      parent_TaskId: 'b7c2d1e3-9a11-4b22-8000-300000000001',
+      projectId: 'a1111111-1111-1111-1111-111111111111',
+      teamId: 'b3333333-3333-3333-3333-333333333333',
+    },
+    
   ]);
 
   // =========================
@@ -127,6 +195,7 @@ async function seed() {
   await db.insert(subtasks).values([
     {
       id: 'c1d2e3f4-1111-4aaa-9000-400000000001',
+      projectId: 'f3a1c9b0-1e2d-4c55-9a1b-100000000001',
       taskId: 'b7c2d1e3-9a11-4b22-8000-300000000001',
       name: 'Install Electrical Panels',
       description: 'Main panel installation',
@@ -137,6 +206,7 @@ async function seed() {
     },
     {
       id: 'c1d2e3f4-1111-4aaa-9000-400000000002',
+      projectId: 'f3a1c9b0-1e2d-4c55-9a1b-100000000001',
       taskId: 'b7c2d1e3-9a11-4b22-8000-300000000001',
       name: 'Wiring Layout',
       description: 'Route electrical wiring',
@@ -144,6 +214,28 @@ async function seed() {
       startDate: '2026-05-06',
       endDate: '2026-05-15',
       sortOrder: 2,
+    },
+    {
+      id: 'c1d2e3f4-1111-4aaa-9000-400000000003',
+      projectId: 'f3a1c9b0-1e2d-4c55-9a1b-100000000001',
+      taskId: 'b7c2d1e3-9a11-4b22-8000-300000000001',
+      name: 'Wiring Layout 2',
+      description: 'Route electrical wiring',
+      status: 'done',
+      startDate: '2026-05-06',
+      endDate: '2026-05-15',
+      sortOrder: 2,
+    },
+     {
+      id: 'c1d2e3f4-1111-4aaa-9000-400000000004',
+      projectId: 'f3a1c9b0-1e2d-4c55-9a1b-100000000001',
+      taskId: 'b7c2d1e3-9a11-4b22-8000-300000000001',
+      name: 'Wiring Layout 3',
+      description: 'Route electrical wiring',
+      status: 'blocked',
+      startDate: '2026-05-30',
+      endDate: '2026-06-15',
+      sortOrder: 3,
     },
   ]);
 

@@ -15,6 +15,34 @@
       "when": 1779505415884,
       "tag": "0001_useful_mojo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779618541030,
+      "tag": "0002_luxuriant_sleepwalker",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1779621133294,
+      "tag": "0003_gray_boomerang",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1779634421184,
+      "tag": "0004_first_mephisto",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1779637672851,
+      "tag": "0005_tidy_ultimo",
+      "breakpoints": true
     }
   ]
 }

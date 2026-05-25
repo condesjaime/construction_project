@@ -11,10 +11,69 @@ interface DiaryEntryFormProps {
   onCancel: () => void;
   projectId?: string;
   taskId?: string;
-  projectData?: any[]; // Add this line to accept project data as a prop
-  tasksData?: any[]; // Add this line to accept tasks data as a prop
-}
+  subtaskId?:string;
+  projectData?: {
+      id: string;
+      name?: string;
+      description?: string;
+      status?: string;
+      startDate?: string;
+      endDate?: string;
+      client?: string;
+      addressLine1?: string;
+      addressLine2?: string;
+      city?: string;
+      state?: string;
+      zipCode?: string;
+      color: string;
+      progress: string;
+      createdAt: string;
+      updatedAt: string;
+    }[];
+  tasksData?: {
+    id: string;
+    projectId?: string;
+    name?: string;
+    description?:  string;
+    status:  string;
+    startDate:  string;
+    endDate:  string;
+    estimatedDays: number;
+    notes:  string;
+    isMilestone: boolean
+    sortOrder: number;
+    createdAt:  string;
+    updatedAt:  string;
+    project?: {
+      id: string;
+      name?: string;
+      description?: string;
+      status?: string;
+      startDate?: string;
+      endDate?: string;
+      client?: string;
+      addressLine1?: string;
+      addressLine2?: string;
+      city?: string;
+      state?: string;
+      zipCode?: string;
+      color: string;
+      progress: string;
+      createdAt: string;
+      updatedAt: string;
+    };
+    team_assignment?:  {
+      id:  string;
+      taskId?:  string;
+      projectId?:  string;
+      teamId?:  string;
+      sortOrder?:  string;
+      createdAt?: string;
+      updatedAt?: string;
+    }[];
 
+  }[];
+}
 interface UploadedFile {
   url: string;
   name: string;
@@ -27,45 +86,88 @@ export function DiaryEntryForm({
   onCancel,
   projectId,
   taskId,
+  subtaskId,
   tasksData,
   projectData,
 }: DiaryEntryFormProps) {
   const [formData, setFormData] = useState({
     projectId: projectId || '',
     taskId: taskId || '',
+    subtaskId: subtaskId || '',
     date: formatDate(new Date(), 'yyyy-MM-dd'),
     notes: '',
     photos: [] as UploadedFile[],
   });
 
   const [uploading, setUploading] = useState(false);
-  
+  const [taskOptions, setTaskOptions] = useState<
+  {
+    key?: string;
+    label?: string;
+    value?: string;
+  }[]
+>([]);
+ const [selectedMedia, setSelectedMedia] = useState<UploadedFile | null>(null);
   const mockTasks = [
     { id: '1', name: 'Structural Demolition' },
     { id: '2', name: 'Electrical Rough-In' },
     { id: '3', name: 'Plumbing Installation' },
   ];
 
+useEffect(() => {
+  if (!formData.projectId || !tasksData) {
+    setTaskOptions([]);
+    return;
+  }
+
+  const dataOptions = tasksData.filter(
+    (t) => t.projectId === formData.projectId
+  );
+
+  const tasks = dataOptions.map((e) => ({
+    key: e.id,
+    label: e.name,
+    value: e.id,
+  }));
+
+  setTaskOptions(tasks);
+}, [formData.projectId, tasksData]);
+
   // Upload files immediately after selecting
   const uploadFiles = async (files: FileList) => {
-  const formData = new FormData();
-   setUploading(true);
-  Array.from(files).forEach((file) => {
-    formData.append('files', file);
+  const allowedFiles = Array.from(files).filter(
+    (file) =>
+      file.type.startsWith('image/') ||
+      file.type.startsWith('video/')
+  );
+
+  if (allowedFiles.length === 0) return;
+
+  const uploadData = new FormData();
+
+  setUploading(true);
+
+  allowedFiles.forEach((file) => {
+    uploadData.append('files', file);
   });
 
-  const response = await fetch('/api/upload', {
-    method: 'POST',
-    body: formData,
-  });
+  try {
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: uploadData,
+    });
 
-  const data = await response.json();
-  setFormData((prev) => ({
-    ...prev,
-    photos: [...prev.photos, ...data.files],
-  }));
-  console.log(data.files);
-  setUploading(false);
+    const data = await response.json();
+
+    setFormData((prev) => ({
+      ...prev,
+      photos: [...prev.photos, ...data.files],
+    }));
+  } catch (error) {
+    console.error(error);
+  } finally {
+    setUploading(false);
+  }
 };
 
   const removePhoto = (index: number) => {
@@ -162,12 +264,10 @@ export function DiaryEntryForm({
             className="w-full px-4 py-2 border border-border rounded-lg text-sm focus:outline-none focus:border-accent"
           >
             <option value="">Select a task...</option>
-
-            {tasksData?.map((task) => (
-              <option key={task.id} value={task.id}>
-                {task.name}
-              </option>
-            ))}
+            {taskOptions.map((task) => (
+                  <option key={task.key} value={task.value}>{task.label}</option>
+                ))}
+            
           </select>
         </div>
 
@@ -194,14 +294,14 @@ export function DiaryEntryForm({
         {/* Photo upload */}
         <div>
           <label className="block text-sm font-medium text-text mb-2">
-            Photos / Files
+            Photos / Videos
           </label>
 
           <label className="border-2 border-dashed border-border rounded-lg p-8 flex flex-col items-center justify-center hover:border-border-strong transition-colors cursor-pointer">
             <Upload className="mb-3 text-text-muted" size={32} />
 
             <div className="text-sm text-text-muted text-center">
-              Click to upload photos or files
+              Click to upload photos or videos
             </div>
 
             <div className="text-xs text-text-muted mt-1">
@@ -211,6 +311,7 @@ export function DiaryEntryForm({
             <input
               type="file"
               multiple
+              accept="image/*,video/*"
               onChange={(e) => {
                 if (e.target.files) {
                   uploadFiles(e.target.files);
@@ -230,42 +331,64 @@ export function DiaryEntryForm({
 
           {/* Preview uploaded files */}
           {formData.photos.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-4">
-              {formData.photos.map((photo, index) => {
-                const isImage = photo.type.startsWith('image');
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-4">
+            {formData.photos.map((photo, index) => {
+              const isImage = photo.type.startsWith('image');
+              const isVideo = photo.type.startsWith('video');
 
-                return (
-                  <div
-                    key={index}
-                    className="relative border border-border rounded-lg overflow-hidden"
-                  >
-                    {isImage ? (
-                      <div className="relative h-32 w-full">
-                        <Image
-                          src={photo.url}
-                          alt={photo.name}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                    ) : (
-                      <div className="h-32 flex items-center justify-center text-sm p-3 text-center">
-                        {photo.name}
-                      </div>
-                    )}
+              return (
+                <div
+                  key={index}
+                  onClick={() => setSelectedMedia(photo)}
+                  className="relative border border-border rounded-lg overflow-hidden bg-black cursor-pointer group"
+                >
+                  {isImage && (
+                    <div className="relative h-32 w-full">
+                      <Image
+                        src={photo.url}
+                        alt={photo.name}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  )}
 
-                    <button
-                      type="button"
-                      onClick={() => removePhoto(index)}
-                      className="absolute top-2 right-2 bg-black/70 text-white rounded-full p-1"
-                    >
-                      <X size={14} />
-                    </button>
+                  {isVideo && (
+                    <>
+                      <video
+                        src={photo.url}
+                        className="h-32 w-full object-cover"
+                        muted
+                        preload="metadata"
+                      />
+
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                        <div className="bg-white/90 rounded-full p-3">
+                          ▶
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs px-2 py-1 truncate">
+                    {photo.name}
                   </div>
-                );
-              })}
-            </div>
-          )}
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removePhoto(index);
+                    }}
+                    className="absolute top-2 right-2 bg-black/70 text-white rounded-full p-1 z-10"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
         </div>
 
         {/* Actions */}
@@ -287,6 +410,37 @@ export function DiaryEntryForm({
           </button>
         </div>
       </form>
+      {selectedMedia && (
+      <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4">
+        <button
+          type="button"
+          onClick={() => setSelectedMedia(null)}
+          className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white rounded-full p-2"
+        >
+          <X size={24} />
+        </button>
+
+        <div className="max-w-6xl max-h-[90vh] w-full flex items-center justify-center">
+          {selectedMedia.type.startsWith('image') ? (
+            <div className="relative w-full h-[90vh]">
+              <Image
+                src={selectedMedia.url}
+                alt={selectedMedia.name}
+                fill
+                className="object-contain"
+              />
+            </div>
+          ) : (
+            <video
+              src={selectedMedia.url}
+              controls
+              autoPlay
+              className="max-h-[90vh] max-w-full rounded-lg"
+            />
+          )}
+        </div>
+      </div>
+    )}
     </div>
   );
 }
