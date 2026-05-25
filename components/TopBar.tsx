@@ -29,7 +29,11 @@ export function TopBar({
   const [showMenu, setShowMenu] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
+ const [mounted, setMounted] = useState(false);
 
+useEffect(() => {
+  setMounted(true);
+}, []);
   const user =
     typeof window !== 'undefined'
       ? JSON.parse(localStorage.getItem('user') || '{}')
@@ -97,17 +101,19 @@ export function TopBar({
               onClick={() => setShowMenu(!showMenu)}
               className="flex items-center gap-2 hover:bg-surface-alt rounded-full px-3 py-2 transition-colors"
             >
-              <div className="w-9 h-9 rounded-full app-bg-lime app-text-green flex items-center justify-center text-sm font-semibold">
-                {initials}
-              </div>
+               {mounted && (
+                      <div className="w-9 h-9 rounded-full app-bg-lime app-text-green flex items-center justify-center text-sm font-semibold">
+                        {initials}
+                      </div>
+                    )}
 
-              <ChevronDown
+              {/* <ChevronDown
                 size={14}
                 className={cn(
                   'transition-transform',
                   showMenu && 'rotate-180'
                 )}
-              />
+              /> */}
             </button>
 
             {/* Dropdown */}
@@ -116,9 +122,11 @@ export function TopBar({
                 {/* User info */}
                 <div className="p-4 border-b border-border">
                   <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-full app-bg-lime app-text-green flex items-center justify-center font-semibold">
-                      {initials}
-                    </div>
+                    {mounted && (
+                      <div className="w-9 h-9 rounded-full app-bg-lime app-text-green flex items-center justify-center text-sm font-semibold">
+                        {initials}
+                      </div>
+                    )}
 
                     <div className="min-w-0">
                       <div className="font-medium text-text truncate">
@@ -134,12 +142,12 @@ export function TopBar({
 
                 {/* Menu */}
                 <div className="p-2">
-                  <button
+                  {/* <button
                     className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-surface-alt transition-colors"
                   >
                     <User size={16} />
                     Profile
-                  </button>
+                  </button> */}
 
                   <button
                     onClick={logout}

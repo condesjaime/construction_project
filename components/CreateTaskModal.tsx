@@ -83,6 +83,26 @@ export function CreateTaskModal({isOpen, onClose }: TaskModalProps) {
   const start = new Date(taskFormData.startDate);
   const end = new Date(taskFormData.endDate);
   
+  if(!taskFormData.startDate){
+    toast.error("Start Date is Required!");
+    return;
+  }
+   if(!taskFormData.endDate){
+    toast.error("End Date is Required!");
+    return;
+  }
+   if(!taskFormData.name){
+    toast.error("Task name is Required!");
+    return;
+  }
+  if(!taskFormData.projectId){
+    toast.error("Select project is Required!");
+    return;
+  }
+  if(!taskFormData.status){
+    toast.error("Status is Required!");
+    return;
+  }
   const days = Math.ceil(
     (end.getTime() - start.getTime()) /
       (1000 * 3600 * 24)
@@ -142,6 +162,7 @@ export function CreateTaskModal({isOpen, onClose }: TaskModalProps) {
             <div className="text-sm text-text-muted">Task Name</div>
             <input
             type="text"
+            required
             value={taskFormData.name}
             onChange={(e) => setTaskFormData({...taskFormData, name: e.target.value})}
             className="border border-border rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -152,6 +173,7 @@ export function CreateTaskModal({isOpen, onClose }: TaskModalProps) {
             <div className="text-sm text-text-muted mb-2">Project</div>
             <div className="text-sm font-medium text-text">
               <select name="project" id="project" 
+               required
               className="w-full border border-border rounded-lg px-3 py-2 bg-white flex items-center justify-between text-left"
               onChange={
                 (e) => setTaskFormData({...taskFormData, projectId: e.target.value})
@@ -194,6 +216,7 @@ export function CreateTaskModal({isOpen, onClose }: TaskModalProps) {
                 <label>Start Date</label>
                 <input
                 type="date"
+                 required
                 value={taskFormData.startDate}
                 onChange={(e) => {
                   setTaskFormData({...taskFormData, startDate: e.target.value});
@@ -206,6 +229,7 @@ export function CreateTaskModal({isOpen, onClose }: TaskModalProps) {
                 <label>End Date</label>
                 <input
                 type="date"
+                 required
                 value={taskFormData.endDate}
                 onChange={(e) => {
                   setTaskFormData({...taskFormData, endDate: e.target.value});
@@ -224,6 +248,7 @@ export function CreateTaskModal({isOpen, onClose }: TaskModalProps) {
                  <div className="text-sm text-text-muted mb-2">Status</div>
             <div className="inline-flex items-center w-full bg-surface-alt rounded-full text-sm font-medium text-text">
             <select
+             required
               value={taskFormData.status}
               onChange={(e) => setTaskFormData({...taskFormData, status: e.target.value})}
               className="w-full border border-border rounded-lg px-3 py-2 bg-white flex items-center justify-between text-left"

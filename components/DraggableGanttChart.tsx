@@ -738,7 +738,7 @@ const handlePointerDown = (
         <div className="legend-item"><span className="legend-sw conflict-sw" /> Scheduling conflict</div>
         <div className="legend-item">Darker shading = progress</div>
         <div className="legend-spacer" />
-        <span>Drag bars to reschedule · click to edit</span>
+        <span>Drag/Extend bars to reschedule · click to edit</span>
       </div>
     </div>
   );

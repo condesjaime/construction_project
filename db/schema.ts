@@ -309,11 +309,41 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
   notifications: many(taskNotifications),
 }));
 
-export const tasksAssignmentRelations = relations(tasksAssignment, ({ one }) => ({
+
+export const tasksAssignmentRelations = relations(
+  tasksAssignment,
+  ({ one }) => ({
+    project: one(projects, {
+      fields: [tasksAssignment.projectId],
+      references: [projects.id],
+    }),
+
+    task: one(tasks, {
+      fields: [tasksAssignment.taskId],
+      references: [tasks.id],
+    }),
+
+    team: one(teams, {
+      fields: [tasksAssignment.teamId],
+      references: [teams.id],
+    }),
+  })
+);
+
+export const subtasksAssignmentRelations = relations(subtasksAssignment, ({ one }) => ({
   task: one(tasks, {
-    fields: [tasksAssignment.taskId],
+    fields: [subtasksAssignment.parent_TaskId],
     references: [tasks.id],
   }),
+  project: one(projects, {
+      fields: [subtasksAssignment.projectId],
+      references: [projects.id],
+    }),
+  team: one(teams, {
+      fields: [subtasksAssignment.teamId],
+      references: [teams.id],
+    }),
+
 }));
 
 export const subtasksRelations = relations(subtasks, ({ one }) => ({
@@ -365,6 +395,12 @@ export type NewProject = typeof projects.$inferInsert;
 
 export type Team = typeof teams.$inferSelect;
 export type NewTeam = typeof teams.$inferInsert;
+
+export type TaskAssignment = typeof tasksAssignment.$inferSelect;
+export type NewTaskAssignment = typeof tasksAssignment.$inferInsert;
+
+export type SubTaskAssignment = typeof subtasksAssignment.$inferSelect;
+export type NewSubTaskAssignment = typeof subtasksAssignment.$inferInsert;
 
 export type Task = typeof tasks.$inferSelect;
 export type NewTask = typeof tasks.$inferInsert;

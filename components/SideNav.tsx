@@ -16,7 +16,7 @@ export function SideNav({ children }: SideNavProps) {
   const toggleNav = () => setIsOpen(!isOpen);
 
   const navItems = [
-    { icon: Home, label: 'Dashboard', href: '/' },
+    { icon: Home, label: 'Dashboard', href: '/dashboard' },
     { icon: Calendar, label: 'Schedule', href: '/schedule' },
     { icon: BookOpen, label: 'Site Diary', href: '/diary' },
     { icon: Settings, label: 'Settings', href: '/settings' },

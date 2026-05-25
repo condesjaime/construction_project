@@ -817,6 +817,7 @@ body {
   font-variant-numeric: tabular-nums;
 }
 .drag-preview-bar {
+  margin-top: 10px;
   position: absolute;
   height: 24px;
   background: rgba(120,120,120,0.25);
@@ -851,4 +852,9 @@ body {
   height: 10px;
   background: #1f2937;
   transform: translateX(-50%) rotate(45deg);
+}
+.more-teams {
+  background: #f3f4f6;
+  color: #374151;
+  font-weight: 600;
 }

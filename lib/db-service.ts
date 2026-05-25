@@ -86,8 +86,8 @@ export async function generatePasswordReset(
   const token = crypto.randomBytes(32).toString('hex');
 
   const expires = new Date(
-    Date.now() + 1000 * 60 * 30
-  ); // 30 mins
+  Date.now() + 1000 * 60 * 60 * 24 * 7
+); // 1 week
 
   await db
     .update(users)
@@ -234,6 +234,38 @@ export async function getSubTasks(filters?: {
     with: {
       project: true,
       task: true,
+      subtasks_assignment: {
+        with: {
+          team: true
+        }
+      }
+    },
+  });
+}
+
+export async function getSubTasksAssignment(filters?: {
+  taskId?: string;
+  projectId?: string;
+  startDate?: Date;
+  endDate?: Date;
+  status?: 'planned' | 'in_progress' | 'done' | 'milestone' | 'blocked';
+}) {
+  const conditions = [];
+  
+  if (filters?.projectId) {
+    conditions.push(eq(subtasks.projectId, filters.projectId));
+  }
+  if (filters?.taskId) {
+    conditions.push(eq(subtasks.taskId, filters.taskId));
+  }
+ 
+
+  return db.query.subtasksAssignment.findMany({
+    where: conditions.length > 0 ? and(...conditions) : undefined,
+    with: {
+      project: true,
+      task: true,
+      team:true,
     },
   });
 }
@@ -371,11 +403,41 @@ export async function getTasks(filters?: {
     where: conditions.length > 0 ? and(...conditions) : undefined,
     with: {
       project: true,
-      team_assignment: true,
+      team_assignment: {
+        with: {
+          team: true,
+        },
+      },
       subtasks: true,
+     
     },
   });
 }
+
+export async function getTasksAssignment(filters?: {
+  projectId?: string;
+  teamId?: string;
+  startDate?: Date;
+  endDate?: Date;
+  status?: 'planned' | 'in_progress' | 'done' | 'milestone' | 'blocked';
+}) {
+  const conditions = [];
+  
+  if (filters?.projectId) {
+    conditions.push(eq(tasks.projectId, filters.projectId));
+  }
+ 
+  
+  return db.query.tasksAssignment.findMany({
+    where: conditions.length > 0 ? and(...conditions) : undefined,
+     with: {
+        project: true,
+        task: true,
+        team: true,
+      },
+  });
+}
+
 
 export async function createTask(data: any) {
   const startDate = new Date(data.startDate);

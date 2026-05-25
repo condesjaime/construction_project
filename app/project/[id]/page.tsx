@@ -6,11 +6,33 @@ import { Card, Button } from '@/components/Card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/Tabs';
 import { GanttChart, type TaskData as GanttTask } from '@/components/GanttChart';
 import { DiaryEntryForm } from '@/components/DiaryEntryForm';
+import {SingleProjectGantt} from '@/components/SingleProjectDraggable';
 import { formatDate, formatOffsetDate,formatShortId,parseOffsetDate } from '@/lib/utils';
 import Image from 'next/image';
 import { MapPin, User, Building2, Filter, Plus } from 'lucide-react';
-import { Edit2, Trash2, ChevronDown , Loader2} from 'lucide-react';
-import {fetchWithAuth} from '@/lib/auth/fetchwithAuth'
+import { Edit2, Trash2, ChevronDown , Loader2, Calendar, Building, X} from 'lucide-react';
+import {fetchWithAuth} from '@/lib/auth/fetchwithAuth';
+import { toast } from 'sonner';
+import { EnhancedTaskModal } from '@/components/EnhancedTaskModal';
+import {CreateTaskModal} from '@/components/CreateTaskModal';
+import {CreateSubTaskModal} from '@/components/CreateSubTaskModal';
+interface TaskData {
+  id: string;
+  projectId: string;
+  projectName: string;
+  projectColor: string;
+  teamId: string;
+  teamName: string;
+  name: string;
+  description?: string;
+  status: 'planned' | 'in_progress' | 'done' | 'milestone' | 'blocked';
+  startDate: Date;
+  endDate: Date;
+  estimatedDays?: number;
+  notes?: string;
+  isMilestone: boolean;
+}
+
 type ProjectPageProps = {
   params: Promise<{ id: string }>;
 };
@@ -21,6 +43,11 @@ interface DiaryEntry {
   notes: string;
   mediaCount: number;
   updatedAt: Date;
+  users?:{
+    id: string;
+    fullName: string;
+    email: string;
+  }
   project:{
     id :string;
     name: string;
@@ -60,8 +87,16 @@ interface UploadedFile {
   type?: string;
 }
 
+interface Teams{
+  id:string;
+  taskId:string;
+  projectId:string;
+  teamName: string;
+}
+
 export default function ProjectPage({ params }: ProjectPageProps) {
   const { id } = use(params);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [activeTab, setActiveTab] = useState('schedule');
   const [showDiaryForm, setShowDiaryForm] = useState(false);
   const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
@@ -69,15 +104,27 @@ export default function ProjectPage({ params }: ProjectPageProps) {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedDeleteId, setSelectedDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [showForm, setShowForm]= useState(false);
+  const [teams, setTeams] =useState();
    const [project, setProject] = useState<any>(null);
+   const [projectData, setProjectData] = useState<any>(null);
    const [tasks, setTasks] = useState<GanttTask[]>([]);
+   const [tasksOptions, setTasksOptions] = useState<GanttTask[]>([]);
+   const [subtasks, setSubTasks] = useState<GanttTask[]>([]);
    const [tasksData, setTasksData]= useState<any>(null);
    const [diaryEntries, setDiaryEntries] = useState<DiaryEntry[]>([]);
    const [rawtasks, setRawtasks]=useState<any>([]);
    const [token, setToken] = useState<string | null>(null);
    const [user, setUser] = useState<any>(null);
    const [mounted, setMounted] = useState(false);
+   const [selectedMedia, setSelectedMedia]=useState<any>(null);
+  const [selectedTask, setSelectedTask] = useState<TaskData | null>(null);
+  const [selectedSubTask, setSelectedSubTask] = useState<TaskData | null>(null);
+  const [mockTasks, setMockTasks] = useState<TaskData[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createSubtaskModalOpen, setCreateSubtaskModalOpen] = useState(false);
+  const [editTaskModal, seteditTaskModal]= useState(false);
+  const [editSubTaskModal, seteditSubTaskModal]= useState(false);
      useEffect(() => {
        setMounted(true);
    
@@ -96,6 +143,8 @@ export default function ProjectPage({ params }: ProjectPageProps) {
        fetchProject(id);
        fetchTasks(id);
        fetchDiary(id);
+       fetchSubTasks(id);
+       fetchTasksOptions(id);
     }
   }, [id]);
 
@@ -105,6 +154,7 @@ export default function ProjectPage({ params }: ProjectPageProps) {
   try {
     const response = await fetch(`/api/projects/${projectId}`);
     const data = await response.json();
+    setProjectData(data);
     const formattedProject = {
       id,
       code: formatShortId(data.id),
@@ -126,34 +176,132 @@ export default function ProjectPage({ params }: ProjectPageProps) {
     console.error('Error fetching project:', error);
   }
 };
-
-const fetchTasks = async (projectId: string) => {
+const fetchTasksOptions = async (projectId: string) => {
   try {
     const response = await fetch(`/api/tasks?projectId=${projectId}`);
 
     const data = await response.json();
     setRawtasks(data);
-    setTasksData(data);
-    const formattedTasks: GanttTask[] = data.map((task: any) => ({
-      id: task.id,
-      projectId: task.projectId,
-      projectName: project?.name || '',
-      projectColor: project?.color || 'p1',
-      teamId: task.teamId,
-      teamName: task.team?.name || 'Unknown Team',
-      name: task.name,
-      status: task.status,
-      startDate: parseOffsetDate(formatOffsetDate(task.startDate)),
-      endDate: parseOffsetDate(formatOffsetDate(task.endDate)),
-      isMilestone: task.isMilestone || false,
-      notes: task.notes,
-      description: task.description,
-      estimatedDays: task.estimatedDays,
-      sortOrder: task.sortOrder,
-      teams: task.teams || undefined,
-    }));
+  } catch (error) {
+    console.error('Error fetching tasks:', error);
+  }
+};
 
-    setTasks(formattedTasks);
+const fetchTasks = async (projectId: string) => {
+  try {
+    const response = await fetch(`/api/task-assignment?projectId=${projectId}`);
+
+    const data = await response.json();
+    
+
+    const formattedTasks: GanttTask[] = data.map((task: any) => {
+      // get only teams connected to the current task
+      const teams = data
+        .filter(
+          (t: any) =>
+            t.taskId === task.taskId &&
+            t.teamId
+        )
+        .map((t: any) => t.team?.name)
+        .filter(Boolean);
+
+      return {
+        uniqueId: task.id,
+        id: task.task.id,
+        projectId: task.project.id,
+        projectName: project?.name || '',
+        projectColor: project?.color || 'p1',
+
+        teamId: task.team.id,
+        teamName: task.team.name,
+
+        name: task.task.name,
+        status: task.task.status,
+
+        startDate: parseOffsetDate(
+          formatOffsetDate(task.task.startDate)
+        ),
+
+        endDate: parseOffsetDate(
+          formatOffsetDate(task.task.endDate)
+        ),
+
+        isMilestone: task.task.isMilestone || false,
+        notes: task.task.notes,
+        description: task.task.description,
+        estimatedDays: task.task.estimatedDays,
+        sortOrder: task.task.sortOrder,
+
+        // only teams related to this task
+        teams,
+      };
+    });
+    setTasks((prev) => [
+    ...prev,
+      ...formattedTasks,
+    ]);
+    console.log(formattedTasks);
+  } catch (error) {
+    console.error('Error fetching tasks:', error);
+  }
+};
+
+const fetchSubTasks = async (projectId: string) => {
+  try {
+    const response = await fetch(`/api/subtask-assignment?projectId=${projectId}`);
+
+    const data = await response.json();
+    
+    const formattedTasks: GanttTask[] = data.map((task: any) => {
+  // get only teams connected to the current task
+  const teams = data
+    .filter(
+      (t: any) =>
+        t.taskId === task.taskId &&
+        t.teamId
+    )
+    .map((t: any) => t.team?.name)
+    .filter(Boolean);
+
+  return {
+    uniqueId: task.id,
+    id: task.subtaskId,
+    projectId: task.project.id,
+    projectName: project?.name || '',
+    projectColor: project?.color || 'p1',
+
+    teamId: task.team.id,
+    teamName: task.team.name,
+
+    name: task.task.name,
+    status: task.task.status,
+
+    startDate: parseOffsetDate(
+      formatOffsetDate(task.task.startDate)
+    ),
+
+    endDate: parseOffsetDate(
+      formatOffsetDate(task.task.endDate)
+    ),
+
+    isMilestone: task.task.isMilestone || false,
+    notes: task.task.notes,
+    description: task.task.description,
+    estimatedDays: task.task.estimatedDays,
+    sortOrder: task.task.sortOrder,
+
+    // only teams related to this task
+    teams,
+    isSubtask: true,
+    parentTaskId: task.task.id
+  };
+});
+
+    setSubTasks(formattedTasks);
+    setTasks((prev) => [
+    ...prev,
+      ...formattedTasks,
+    ]);
     console.log(formattedTasks);
   } catch (error) {
     console.error('Error fetching tasks:', error);
@@ -184,21 +332,6 @@ const fetchTasks = async (projectId: string) => {
     }
   };
 
-  // const projects= {
-  //   id,
-  //   code: 'WMD-024',
-  //   name: 'Westmead Office Refurbishment',
-  //   description:
-  //     'Complete office refurbishment including structural work, electrical, plumbing, and finishes',
-  //   client: 'Westmead Medical Centre',
-  //   address: '158 Hawkesbury Rd, Westmead',
-  //   manager: 'Steven Trinh',
-  //   status: 'in_progress',
-  //   startDate: new Date(2026, 4, 12),
-  //   endDate: new Date(2026, 5, 27),
-  //   progress: 14,
-  //   color: 'p1',
-  // };
  
   const today = new Date();
   const d = (offset: number) => {
@@ -209,16 +342,25 @@ const fetchTasks = async (projectId: string) => {
 
  
 
-  const groupedTasks = useMemo(
-  () => ({
+ const groupedTasks = useMemo(() => {
+  const uniqueMap = new Map();
+
+  tasks.forEach((task: any) => {
+    const key = task.taskId || task.id;
+
+    if (!uniqueMap.has(key)) {
+      uniqueMap.set(key, task);
+    }
+  });
+
+  return {
     all: {
       name: project?.name || 'Project',
       color: project?.color || 'p1',
-      tasks: tasks,
+      tasks: Array.from(uniqueMap.values()),
     },
-  }),
-  [project, tasks]
-);
+  };
+}, [project, tasks]);
 
   // ===== Day-of/Day-X metrics for the project pill =====
   const totalDays = project
@@ -246,13 +388,13 @@ const dayOfProject = project
 const dayOfClamped = Math.min(dayOfProject, totalDays);
 
 const teamCount = useMemo(
-  () => new Set(tasks.map((t) => t.teamId)).size,
-  [tasks]
+  () => new Set(groupedTasks.all.tasks?.map((t) => t.teamId)).size,
+  [groupedTasks]
 );
 
 const milestoneCount = useMemo(
-  () => tasks.filter((t) => t.isMilestone).length,
-  [tasks]
+  () => groupedTasks.all.tasks?.filter((t) => t.isMilestone).length || 0,
+  [groupedTasks]
 );
   const saveDiaryEntry = async (
     entry: {
@@ -293,17 +435,19 @@ const milestoneCount = useMemo(
       );
   
       if (response.ok) {
+        toast.success("Diary updated");
         fetchDiary(id);
-        setShowForm(false);
+        setShowDiaryForm(false);
         setEditingEntry(null);
       }
     } catch (error) {
+      toast.error("Failed to update diary");
       console.error('Error saving diary entry:', error);
     }
   };
   const handleEditEntry = (entry: DiaryEntry) => {
     setEditingEntry(entry);
-    setShowForm(true);
+    setShowDiaryForm(true);
   };
     const handleDeleteEntry = async () => {
     if (!selectedDeleteId) return;
@@ -348,7 +492,70 @@ const milestoneCount = useMemo(
     {} as Record<string, { label: string; entries: DiaryEntry[] }>
   );
 
+const updateTask = async(taskId: string, updatedData: any) => {
+    try {
+        const response = await fetch(`/api/tasks/${taskId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updatedData),
+        });
+        if (!response.ok) {
+            throw new Error('Failed to update task');
+        }
+        const data = await response.json();
+        toast.success('Task updated successfully');
+        console.log('Updated task:', data);
+    } catch (error) {
+        toast.error('Failed to update task');
+        console.error('Error updating task:', error);
+    }finally{
+      fetchTasks(project.id);
+      fetchSubTasks(project.id);
+    }
+  };
+
+  const updateSubTask = async(taskId: string, updatedData: any) => {
+    try {
+        const response = await fetch(`/api/subtasks/${taskId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updatedData),
+        });
+        if (!response.ok) {
+            throw new Error('Failed to update task');
+        }
+        const data = await response.json();
+        toast.success('Sub-Task updated successfully');
+        console.log('Updated task:', data);
+    } catch (error) {
+        toast.error('Failed to update sub-task');
+        console.error('Error updating sub-task:', error);
+    }finally{
+      fetchTasks(project.id);
+      fetchSubTasks(project.id);
+    }
+  };
+
+ const handleTaskClick = (task: TaskData) => {
+     setSelectedTask(task);
+     setIsModalOpen(true);
+   };
  
+   const handleReschedule = (taskId: string, newStart: Date, newEnd: Date, isSubtask?: boolean) => {
+     setMockTasks((prev) =>
+       prev.map((t) => (t.id === taskId ? { ...t, startDate: newStart, endDate: newEnd } : t))
+     );
+     if(isSubtask){
+      updateSubTask(taskId, { startDate: formatDate(newStart,'yyyy-MM-dd'), endDate: formatDate(newEnd,'yyyy-MM-dd') });
+     }else{
+      updateTask(taskId, { startDate: formatDate(newStart,'yyyy-MM-dd'), endDate: formatDate(newEnd,'yyyy-MM-dd') });
+     }
+     
+   };
 
   if (!project) {
   return (
@@ -357,6 +564,18 @@ const milestoneCount = useMemo(
     </div>
   );
 }
+
+
+  const handlePrevMonth = () => {
+    const prev = new Date(currentMonth);
+    prev.setMonth(prev.getMonth() - 1);
+    setCurrentMonth(prev);
+  };
+  const handleNextMonth = () => {
+    const next = new Date(currentMonth);
+    next.setMonth(next.getMonth() + 1);
+    setCurrentMonth(next);
+  };
 
   return (
     <div className="flex flex-col h-screen bg-white">
@@ -384,10 +603,10 @@ const milestoneCount = useMemo(
           <div className="project-stats-row">
             <span className="status-pill">
               <span className="pulse" />
-              In Progress
+              {project.status.toUpperCase()}
             </span>
             <span className="day-info">
-              {formatDate(project.startDate, 'dd MMM')} → {formatDate(project.endDate, 'dd MMM')} ·{' '}
+              {formatDate(project.startDate, 'dd MM')} → {formatDate(project.endDate, 'dd MM')} ·{' '}
               <strong>Day {dayOfClamped}</strong> of {totalDays}
             </span>
             <div className="progress-bar">
@@ -413,7 +632,7 @@ const milestoneCount = useMemo(
             <div className={`gantt-proto theme-${project.color}`}>
               <div className="gp-toolbar">
                 <div className="gp-toolbar-left">
-                  {tasks.length} tasks · {teamCount} teams · {milestoneCount} milestones
+                  {groupedTasks.all.tasks?.length} tasks · {teamCount} teams · {milestoneCount} milestones
                 </div>
                 <div className="gp-toolbar-controls">
                   <span className="date-range">
@@ -426,9 +645,21 @@ const milestoneCount = useMemo(
                 </div>
               </div>
             </div>
+            
             <GanttChart
               groupedTasks={groupedTasks}
-              onTaskClick={() => {}}
+              onTaskReschedule={handleReschedule}
+               onTaskClick={(task) => {
+                setSelectedTask(task);
+                seteditTaskModal(true);
+                console.log(task);
+              }}
+              onSubtaskClick={(subtask) => {
+                setSelectedSubTask(subtask);
+                seteditSubTaskModal(true);
+              }}
+              onAddSubTask={()=>setCreateSubtaskModalOpen(true)}
+              onAddTask={()=>setCreateModalOpen(true)}
               themeColor={project.color}
             />
           </TabsContent>
@@ -444,10 +675,11 @@ const milestoneCount = useMemo(
               <DiaryEntryForm
                           pageName="project"
                           onSubmit={saveDiaryEntry}
-                          tasksData={tasksData}
+                          projectData={projectData}
+                          tasksData={rawtasks}
                           project={project}
                           onCancel={() => {
-                            setShowForm(false);
+                            setShowDiaryForm(false);
                             setEditingEntry(null);
                           }}
                           projectId={editingEntry?.project?.id}
@@ -476,12 +708,13 @@ const milestoneCount = useMemo(
                           }
                         />
             ) : (
-              <div className="text-center py-12 px-6">
-                {Object.entries(groupedEntries).map(([key, group]) => (
+              <div className="space-y-8">
+              {Object.entries(groupedEntries).map(([key, group]) => (
                 <div key={key}>
-                  
+                  <h2 className="text-lg font-semibold text-text-muted mb-4">
+                  </h2>
                   <div className="space-y-3">
-                    {group.entries.map((entry: DiaryEntry) => (
+                    {group.entries.map((entry) => (
                       <div
                         key={entry.id}
                         className="bg-surface border border-border rounded-lg overflow-hidden hover:border-border-strong transition-colors"
@@ -495,22 +728,59 @@ const milestoneCount = useMemo(
                           }
                           className="w-full p-4 flex items-start justify-between text-left hover:bg-surface-alt transition-colors"
                         >
-                          <div className="flex-1">
+                          <div className="w-[50%]">
                             <div className="flex items-start gap-4">
                               <div>
                                 <div className="font-semibold text-text">
-                                  {formatDate(entry.entryDate, 'dd MMM yyyy')}
+                                  {formatDate(entry.entryDate, 'MM dd, yyyy')}
                                 </div>
                                 <div className="text-sm text-text-muted mt-1">
-                                  {entry.title}
+                                  <div className='flex justify-start'>
+                                  <span className={`flex text-md text-text py-2 px-3 gap-2 rounded-full bg-gray-100`}> 
+                                   <Building size={18} /> Project: {entry.project.name}
+                                   </span>
+                                  </div>
+                                  <div className='flex justify-start mt-1'>
+                                  <span className={`flex text-md text-text py-2 px-3 gap-2 rounded-full bg-gray-100`}> 
+                                   <Calendar size={18} /> Task: {entry.task.name}
+                                   </span>
+                                  </div>
                                 </div>
+                                
                               </div>
                             </div>
+                            <div className='flex w-full justify-between items-center'>
+                                  <div className='w-full'>
+                                        <div className="flex items-center gap-3">
+                                          <div className="flex-1 h-2 bg-surface-alt border border-border rounded-full overflow-hidden">
+                                            <div
+                                              className={`h-full app-bg-lime`}
+                                              style={{ width: `${entry.project.progress}%` }}
+                                            />
+                                          </div>
+                                          <span className="text-sm font-mono text-text-muted min-w-12 text-right">
+                                            {entry.project.progress}%
+                                          </span>
+                                        </div>
+                                  </div>
+                                    
+                                 </div>
                           </div>
+
+                          
                           <div className="flex items-center gap-2 ml-4">
+                           
+                                <span className='text-xs px-3 py-1 rounded-full bg-red-100'>By: {entry.users?.fullName}</span>
+                                
+                            
                             {entry.photos.length > 0 && (
-                              <div className="text-xs bg-surface-alt px-2 py-1 rounded text-text-muted">
-                                {entry.photos.length} photo{entry.photos.length > 1 ? 's' : ''}
+                              <div className="text-xs bg-gray-200 px-2 py-1 rounded-full text-text-muted">
+                               <span className='app-text-green w-[50px]'>{entry.photos.length} photo{entry.photos.length > 1 ? 's' : ''}</span> 
+                              </div>
+                            )}
+                            {entry.videos.length > 0 && (
+                              <div className="text-xs bg-gray-200 px-2 py-1 rounded-full text-text-muted">
+                               <span className='app-text-green'>{entry.videos.length} video{entry.videos.length > 1 ? 's' : ''}</span> 
                               </div>
                             )}
                             <ChevronDown
@@ -519,63 +789,107 @@ const milestoneCount = useMemo(
                                 expandedEntry === entry.id ? 'rotate-180' : ''
                               }`}
                             />
+                            
                           </div>
+                          
                         </button>
 
                         {/* Expanded content */}
                         {expandedEntry === entry.id && (
                           <div className="px-4 pb-4 border-t border-border">
-                            {/* Notes */}
-                            <p className="text-sm text-text py-4">{entry.notes}</p>
-
-                            {/* Media preview */}
-                            {entry.photos.length > 0 && (
-                              <div>
-                                <div className="text-xs justify-start text-text-muted font-semibold mb-3 uppercase">
-                                  Media
-                                </div>
-                                <div className="flex w-full gap-2 mb-4">
-                                  {entry.photos.length > 0 && (
-                                              <div className="flex justify-start gap-3 mt-4">
-                                                {entry.photos.map((photo, index) => {
-                                                  const isImage = photo.type?.startsWith('image');
-                                  
-                                                  return (
-                                                    <div
-                                                      key={index}
-                                                      className="relative w-40 border border-border rounded-lg overflow-hidden"
-                                                    >
-                                                      {isImage ? (
-                                                        <div className="relative h-32 w-full hover:border-2 border-lime-500">
-                                                          <Image
-                                                            src={photo.url ?? ''}
-                                                            alt={photo.name ?? 'Photo'}
-                                                            fill
-                                                            className="object-cover"
-                                                          />
-                                                        </div>
-                                                      ) : (
-                                                        <div className="h-32 flex items-center justify-center text-sm p-3 text-center">
-                                                          {photo.name}
-                                                        </div>
-                                                      )}
-                                                    </div>
-                                                  );
-                                                })}
+                           <div className="mt-2">
+                           <label>Notes</label>
+                            <div className="border rounded-lg border-border w-full p-2">
+                            <p className="text-sm text-text py-2">{entry.notes}</p>
+                            </div>
+                            
+                            
+                           </div>
+                           
+                            <div className="flex flex-wrap gap-2 justify-start mt-2">
+                                        {/* Photos */}
+                                        {entry.photos.length > 0 &&
+                                          entry.photos.map((photo, index) => {
+                                            const isImage = photo.type?.startsWith('image');
+                            
+                                            return (
+                                              <div
+                                                key={`photo-${index}`}
+                                                onClick={() => setSelectedMedia(photo)}
+                                                className="relative border border-border rounded-lg overflow-hidden bg-black cursor-pointer group w-40 shrink-0"
+                                              >
+                                                {isImage && (
+                                                  <div className="relative h-32 w-full">
+                                                    <Image
+                                                      src={photo.url ?? ''}
+                                                      alt={photo.name ?? ''}
+                                                      fill
+                                                      className="object-cover"
+                                                    />
+                                                  </div>
+                                                )}
+                            
+                                                <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs px-2 py-1 truncate">
+                                                  {photo.name}
+                                                </div>
+                            
+                                                
                                               </div>
-                                            )}
-                                </div>
-                              </div>
-                            )}
+                                            );
+                                          })}
+                            
+                                        {/* Videos */}
+                                        {entry.videos.length > 0 &&
+                                          entry.videos.map((video, index) => {
+                                            const isVideo = video.type?.startsWith('video');
+                            
+                                            return (
+                                              <div
+                                                key={`video-${index}`}
+                                                onClick={() => setSelectedMedia(video)}
+                                                className="relative border border-border rounded-lg overflow-hidden bg-black cursor-pointer group w-40 shrink-0"
+                                              >
+                                                {isVideo && (
+                                                  <>
+                                                    <video
+                                                      src={video.url}
+                                                      className="h-32 w-full object-cover"
+                                                      muted
+                                                      preload="metadata"
+                                                    />
+                            
+                                                    <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                                      <div className="bg-white/90 rounded-full p-3 text-black">
+                                                        ▶
+                                                      </div>
+                                                    </div>
+                                                  </>
+                                                )}
+                            
+                                                <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs px-2 py-1 truncate">
+                                                  {video.name}
+                                                </div>
+                            
+                                                
+                                              </div>
+                                            );
+                                          })}
+                                      </div>
 
                             {/* Actions */}
                             <div className="flex gap-2 pt-4 border-t border-border">
-                              <button className="flex-1 px-3 py-2 text-sm font-medium text-text-muted hover:text-text hover:bg-surface-alt rounded-lg transition-colors flex items-center justify-center gap-2">
+                              <button
+                              onClick={() => handleEditEntry(entry)}
+                              className="flex-1 px-3 py-2 text-sm font-medium text-text-muted hover:text-text hover:bg-surface-alt rounded-lg transition-colors flex items-center justify-center gap-2"
+                            >
                                 <Edit2 size={14} />
                                 Edit
                               </button>
                               <button
-                                onClick={() => handleDeleteEntry()}
+                                onClick={() => {
+                                  setSelectedDeleteId(entry.id);
+                                  setDeleteModalOpen(true);
+                                }}
                                 className="flex-1 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center gap-2"
                               >
                                 <Trash2 size={14} />
@@ -589,8 +903,7 @@ const milestoneCount = useMemo(
                   </div>
                 </div>
               ))}
-                
-              </div>
+            </div>
             )}
           </TabsContent>
 
@@ -621,7 +934,37 @@ const milestoneCount = useMemo(
           </TabsContent>
         </div>
       </Tabs>
+    {selectedMedia && (
+      <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4">
+        <button
+          type="button"
+          onClick={() => setSelectedMedia(null)}
+          className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white rounded-full p-2"
+        >
+          <X size={24} />
+        </button>
 
+        <div className="max-w-6xl max-h-[90vh] w-full flex items-center justify-center">
+          {selectedMedia?.type?.startsWith('image') ? (
+            <div className="relative w-full h-[90vh]">
+              <Image
+                src={selectedMedia.url ?? ''}
+                alt={selectedMedia.name ?? ''}
+                fill
+                className="object-contain"
+              />
+            </div>
+          ) : (
+            <video
+              src={selectedMedia.url}
+              controls
+              autoPlay
+              className="max-h-[90vh] max-w-full rounded-lg"
+            />
+          )}
+        </div>
+      </div>
+    )}            
     {deleteModalOpen && (
   <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
     <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -677,6 +1020,41 @@ const milestoneCount = useMemo(
     </div>
   </div>
 )}  
+
+{isModalOpen && selectedTask && (
+        <EnhancedTaskModal
+          task={selectedTask}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onTaskUpdate={(taskId, updates) => {
+            setMockTasks((prev) =>
+              prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t))
+            );
+          }}
+        />
+      )}
+      {/* Create Task Modal */}
+      {createModalOpen && (
+        <CreateTaskModal
+          isOpen={createModalOpen}
+          onClose={() => {
+            setCreateModalOpen(false);
+            fetchTasks(id);
+            fetchSubTasks(id);
+        }}
+        />
+      )}
+
+      {createSubtaskModalOpen && (
+        <CreateSubTaskModal
+          isOpen={createSubtaskModalOpen}
+          onClose={() => {
+            setCreateSubtaskModalOpen(false);
+            fetchTasks(id);
+            fetchSubTasks(id);
+        }}
+        />
+      )}
     </div>
   );
 }

@@ -185,6 +185,8 @@ useEffect(() => {
   entryDate,
 ]);
 
+
+
 useEffect(() => {
   if (!formData.projectId || !tasksData) {
     setTaskOptions([]);
@@ -195,6 +197,7 @@ useEffect(() => {
     (t) => t.projectId === formData.projectId
   );
 
+
   const tasks = dataOptions.map((e) => ({
     key: e.id,
     label: e.name,
@@ -204,6 +207,19 @@ useEffect(() => {
   setTaskOptions(tasks);
 }, [formData.projectId, tasksData]);
 
+
+useEffect(()=>{
+  if(tasksData && pageName==='project'){
+     const tasksoptions = tasksData.map((e) => ({
+      key: e.id,
+      label: e.name,
+      value: e.id,
+    }));
+ console.log("tasks data options", tasksoptions);
+  setTaskOptions(tasksoptions);
+  }
+ 
+},[tasksData, pageName])
   // Upload files immediately after selecting
   const uploadFiles = async (files: FileList) => {
   const allowedFiles = Array.from(files).filter(

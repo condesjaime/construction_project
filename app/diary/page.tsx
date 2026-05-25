@@ -8,7 +8,8 @@ import { DiaryEntryForm } from '@/components/DiaryEntryForm';
 import { type TaskData as GanttTask } from '@/components/GanttChart';
 import Image from 'next/image';
 import { formatDate, formatOffsetDate,formatShortId,parseOffsetDate } from '@/lib/utils';
-import {fetchWithAuth} from '@/lib/auth/fetchwithAuth'
+import {fetchWithAuth} from '@/lib/auth/fetchwithAuth';
+import { toast } from 'sonner';
 interface DiaryEntry {
   id: string;
   entryDate: Date;
@@ -208,11 +209,13 @@ const [mounted, setMounted] = useState(false);
     );
 
     if (response.ok) {
+      toast.success("Diary updated");
       fetchDiary();
       setShowForm(false);
       setEditingEntry(null);
     }
   } catch (error) {
+     toast.error("Failed to update diary");
     console.error('Error saving diary entry:', error);
   }
 };
