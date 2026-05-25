@@ -1,228 +1,414 @@
 'use client';
 
-import React, { useMemo, useEffect, useState } from 'react';
-import { TopBar } from '@/components/TopBar';
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  Eye,
+  EyeOff,
+  Loader2,
+  User,
+  Mail,
+  Lock,
+  Building2,
+} from 'lucide-react';
 
-import { Card } from '@/components/Card';
-import { BarChart3, BookOpen, Calendar, AlertCircle } from 'lucide-react';
-import { formatDate } from '@/lib/utils';
-import ProjectCreateModal from '@/components/ProjectCreateModal';
 
-interface ProjectStats {
-  id: string;
-  name: string;
-  color: string;
-  taskCount: number;
-  completedTasks: number;
-  inProgressTasks: number;
-  progress: number;
+import { toast } from 'sonner';
+
+interface LoginForm {
+  email: string;
+  password: string;
 }
 
-export default function Dashboard() {
-  // fetch data
-  const [projects, setProjects] = React.useState<ProjectStats[]>([]);
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  
-    useEffect(() => {
-        fetchProjects();
-    }, []);
-    
-    const fetchProjects = async () => {
+interface CreateUserForm {
+  fullName: string;
+  email: string;
+  password: string;
+}
+
+export default function LoginPage() {
+  const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
+    const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  const [showPassword, setShowPassword] = useState(false);
+
+  const [loginForm, setLoginForm] = useState<LoginForm>({
+    email: '',
+    password: '',
+  });
+
+  const [createUserForm, setCreateUserForm] =
+    useState<CreateUserForm>({
+      fullName: '',
+      email: '',
+      password: '',
+    });
+
+  const login = async () => {
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(loginForm),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error || 'Login failed');
+      }
+
+      // Save token
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('refreshToken',data.refreshToken);
+      // Optional user info
+      localStorage.setItem('user', JSON.stringify(data.user));
+
+      toast.success('Welcome Back! ', data.user);
+
+      // Redirect to dashboard
+      router.push('/dashboard');
+    } catch (error) {
+      toast.error('Invalid credentials!');
+      console.error(error);
+    }
+  };
+
+  const createUser = async () => {
+    try {
       setLoading(true);
-        try {
-            const response = await fetch('/api/projects');
-            const data = await response.json();
-            const formattedProjects = data.map((p: any) => {
-              return {
-                id: p.id,
-                name: p.name,
-                color: p.color,
-                taskCount: p.tasks.length,
-                completedTasks: p.progress === 100 ? 1 : 0,
-                inProgressTasks: p.tasks.filter((t: any) => t.status === 'in_progress').length,
-                progress: p.progress,
-              };
-            });
-            console.log('Fetched projects:', data);
-            setProjects(formattedProjects);
-        } catch (error) {
-            console.error('Error fetching projects:', error);
-        } finally{
-          setLoading(false);
-        }
-    };
-  
 
-  const stats = useMemo(() => {
-    return {
-      totalProjects: projects.length,
-      totalTasks: projects.reduce((acc, p) => acc + p.taskCount, 0),
-      completedTasks: projects.reduce((acc, p) => acc + p.completedTasks, 0),
-      inProgressTasks: projects.reduce((acc, p) => acc + p.inProgressTasks, 0),
-    };
-  }, [projects]);
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(createUserForm),
+      });
 
-  
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || 'Failed to create account'
+        );
+      }
+
+      toast.success(
+        'Account created successfully'
+      );
+
+      setActiveTab('login');
+
+      setLoginForm({
+        email: createUserForm.email,
+        password: '',
+      });
+
+      setCreateUserForm({
+        fullName: '',
+        email: '',
+        password: '',
+      });
+
+    } catch (error: any) {
+      toast.error(
+        error.message || 'Signup failed'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col h-screen">
-      <ProjectCreateModal
-        isOpen={open}
-        onClose={() => setOpen(false)}
-        onCreated={(project) => {
-            fetchProjects();
-            console.log('Created:', project);
-        }}
-        />
-      <TopBar
-        title="Dashboard"
-        subtitle="Overview of all projects and tasks"
-        breadcrumbs={[{ label: 'Dashboard', href: '/' }]}
-      />
-
-      {/* Main content */}
-      <div className="flex-1 overflow-auto bg-bg p-8">
-        <div className="max-w-6xl mx-auto space-y-8">
-          {/* Stats Grid */}
-          <div className="grid grid-cols-4 gap-4">
-            <StatCard
-              icon={BarChart3}
-              label="Total Projects"
-              value={stats.totalProjects}
-            />
-            <StatCard
-              icon={Calendar}
-              label="Total Tasks"
-              value={stats.totalTasks}
-            />
-            <StatCard
-              icon={Calendar}
-              label="In Progress"
-              value={stats.inProgressTasks}
-              color="orange"
-            />
-            <StatCard
-              icon={Calendar}
-              label="Completed"
-              value={stats.completedTasks}
-              color="green"
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-slate-200 flex items-center justify-center p-6">
+      <div className="w-full max-w-md">
+        {/* Logo / Header */}
+        <div className="mb-8 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-lime-500 flex items-center justify-center mx-auto shadow-lg">
+            <Building2
+              size={30}
+              className="text-black"
             />
           </div>
 
-          {/* Projects List */}
-          {!projects.length && (<>
-            <p className="text-text-muted">No projects found.</p>
-          </>)}
+          <h1 className="text-3xl font-bold text-slate-900 mt-5">
+            Construction Scheduler
+          </h1>
 
-          {loading && (
-            <p className="text-text-muted">Loading projects...</p>
-          )}
-          <div>
-            <h2 className="text-xl font-semibold text-text mb-4">Projects</h2>
-            <div className="space-y-3">
-              {projects.map((project) => (
-                <a
-                  key={project.id}
-                  href={`/project/${project.id}`}
-                  className="block"
-                >
-                  <Card
-                    hoverable
-                    className="p-6 flex items-center justify-between"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div
-                          className={`w-4 h-4 rounded-full bg-${project.color}`}
-                        />
-                        <h3 className="text-lg font-semibold text-text">
-                          {project.name}
-                        </h3>
-                      </div>
+          <p className="text-slate-500 mt-2">
+            Manage projects, teams, and site diary
+          </p>
+        </div>
 
-                      <div className="flex gap-8 text-sm text-text-muted mb-3">
-                        <span>{project.completedTasks} completed</span>
-                        <span>{project.inProgressTasks} in progress</span>
-                        
-                        
-                      </div>
-
-                      {/* Progress bar */}
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 h-2 bg-surface-alt border border-border rounded-full overflow-hidden">
-                          <div
-                            className={`h-full app-bg-lime`}
-                            style={{ width: `${project.progress}%` }}
-                          />
-                        </div>
-                        <span className="text-sm font-mono text-text-muted min-w-12 text-right">
-                          {project.progress}%
-                        </span>
-                      </div>
-                    </div>
-                  </Card>
-                </a>
-              ))}
-            </div>
-          </div>
-
-          {/* Quick actions */}
-          <div className="flex gap-4">
-            <button 
-            onClick={() => setOpen(true)}
-            className="px-6 py-3 app-bg-lime app-text-green rounded-lg font-medium  transition-colors">
-              + New Project
-            </button>
-            <a
-              href="/schedule"
-              className="px-6 py-3 bg-surface border border-border text-text rounded-lg font-medium hover:bg-surface-alt transition-colors"
+        {/* Card */}
+        <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+          {/* Tabs */}
+          <div className="flex border-b border-slate-200">
+            <button
+              onClick={() =>
+                setActiveTab('login')
+              }
+              className={`flex-1 py-4 text-sm font-semibold transition-all ${
+                activeTab === 'login'
+                  ? 'bg-lime-500 text-black'
+                  : 'text-slate-500 hover:bg-slate-50'
+              }`}
             >
-              View Full Schedule
-            </a>
+              Login
+            </button>
+
+            <button
+              onClick={() =>
+                setActiveTab('signup')
+              }
+              className={`flex-1 py-4 text-sm font-semibold transition-all ${
+                activeTab === 'signup'
+                  ? 'bg-lime-500 text-black'
+                  : 'text-slate-500 hover:bg-slate-50'
+              }`}
+            >
+              Create Account
+            </button>
           </div>
+
+          <div className="p-8">
+            {/* LOGIN */}
+            {activeTab === 'login' && (
+              <div className="space-y-5">
+                {/* Email */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Email Address
+                  </label>
+
+                  <div className="relative">
+                    <Mail
+                      size={18}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
+
+                    <input
+                      type="email"
+                      placeholder="you@example.com"
+                      value={loginForm.email}
+                      onChange={(e) =>
+                        setLoginForm({
+                          ...loginForm,
+                          email: e.target.value,
+                        })
+                      }
+                      className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-lime-400"
+                    />
+                  </div>
+                </div>
+
+                {/* Password */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Password
+                  </label>
+
+                  <div className="relative">
+                    <Lock
+                      size={18}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
+
+                    <input
+                      type={
+                        showPassword
+                          ? 'text'
+                          : 'password'
+                      }
+                      placeholder="••••••••"
+                      value={loginForm.password}
+                      onChange={(e) =>
+                        setLoginForm({
+                          ...loginForm,
+                          password:
+                            e.target.value,
+                        })
+                      }
+                      className="w-full pl-11 pr-12 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-lime-400"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowPassword(
+                          !showPassword
+                        )
+                      }
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+                    >
+                      {showPassword ? (
+                        <EyeOff size={18} />
+                      ) : (
+                        <Eye size={18} />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Login Button */}
+                <button
+                  onClick={login}
+                  disabled={loading}
+                  className="w-full bg-lime-500 hover:bg-lime-400 text-black font-semibold py-3 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {loading && (
+                    <Loader2
+                      size={18}
+                      className="animate-spin"
+                    />
+                  )}
+
+                  Sign In
+                </button>
+              </div>
+            )}
+
+            {/* SIGNUP */}
+            {activeTab === 'signup' && (
+              <div className="space-y-5">
+                {/* Full Name */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Full Name
+                  </label>
+
+                  <div className="relative">
+                    <User
+                      size={18}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
+
+                    <input
+                      type="text"
+                      placeholder="Juan Dela Cruz"
+                      value={
+                        createUserForm.fullName
+                      }
+                      onChange={(e) =>
+                        setCreateUserForm({
+                          ...createUserForm,
+                          fullName:
+                            e.target.value,
+                        })
+                      }
+                      className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-lime-400"
+                    />
+                  </div>
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Email Address
+                  </label>
+
+                  <div className="relative">
+                    <Mail
+                      size={18}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
+
+                    <input
+                      type="email"
+                      placeholder="you@example.com"
+                      value={
+                        createUserForm.email
+                      }
+                      onChange={(e) =>
+                        setCreateUserForm({
+                          ...createUserForm,
+                          email: e.target.value,
+                        })
+                      }
+                      className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-lime-400"
+                    />
+                  </div>
+                </div>
+
+                {/* Password */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Password
+                  </label>
+
+                  <div className="relative">
+                    <Lock
+                      size={18}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
+
+                    <input
+                      type={
+                        showPassword
+                          ? 'text'
+                          : 'password'
+                      }
+                      placeholder="Create password"
+                      value={
+                        createUserForm.password
+                      }
+                      onChange={(e) =>
+                        setCreateUserForm({
+                          ...createUserForm,
+                          password:
+                            e.target.value,
+                        })
+                      }
+                      className="w-full pl-11 pr-12 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-lime-400"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowPassword(
+                          !showPassword
+                        )
+                      }
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+                    >
+                      {showPassword ? (
+                        <EyeOff size={18} />
+                      ) : (
+                        <Eye size={18} />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Signup Button */}
+                <button
+                  onClick={createUser}
+                  disabled={loading}
+                  className="w-full bg-slate-900 hover:bg-black text-white font-semibold py-3 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {loading && (
+                    <Loader2
+                      size={18}
+                      className="animate-spin"
+                    />
+                  )}
+
+                  Create Account
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="mt-6 text-center text-xs text-slate-500">
+          @copyrights 2026
         </div>
       </div>
     </div>
-  );
-}
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  color,
-}: {
-  icon: any;
-  label: string;
-  value: number;
-  color?: 'orange' | 'green';
-}) {
-  return (
-    <Card className="p-6">
-      <div className="flex items-start justify-between mb-4">
-        <div
-          className={`p-3 rounded-lg ${
-            color === 'orange'
-              ? 'bg-st-progress-soft'
-              : color === 'green'
-                ? 'bg-st-done-soft'
-                : 'bg-surface-alt'
-          }`}
-        >
-          <Icon
-            size={20}
-            className={`${
-              color === 'orange'
-                ? 'text-st-progress'
-                : color === 'green'
-                  ? 'text-st-done'
-                  : 'text-text'
-            }`}
-          />
-        </div>
-      </div>
-      <div className="text-3xl font-bold text-text">{value}</div>
-      <div className="text-sm text-text-muted mt-1">{label}</div>
-    </Card>
   );
 }

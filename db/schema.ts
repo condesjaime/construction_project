@@ -24,6 +24,18 @@ export const taskStatusEnum = pgEnum('task_status', [
   'blocked',
 ]);
 
+export const userStatusEnum = pgEnum('user_status', [
+  'active',
+  'inactive',
+  'blocked',
+]);
+
+export const userLevelEnum = pgEnum('user_level', [
+  'basic',
+  'manager',
+  'admin',
+]);
+
 export const entryStatusEnum = pgEnum('entry_status', [
   'draft',
   'published',
@@ -185,6 +197,42 @@ export const subtasks = pgTable(
   })
 );
 
+export const users = pgTable('users', {
+  id: uuid('id').primaryKey().defaultRandom(),
+
+  fullName: varchar('full_name', { length: 255 }).notNull(),
+  
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  
+  passwordHash: text('password_hash').notNull(),
+
+  passwordSalt: text('password_salt').notNull(),
+  userLevel: userLevelEnum('user_level').notNull().default('basic'),
+  status: userStatusEnum('status')
+    .notNull()
+    .default('active'),
+
+  mustChangePassword: boolean('must_change_password')
+    .notNull()
+    .default(false),
+
+  passwordResetToken: text('password_reset_token'),
+
+  passwordResetExpiresAt: timestamp(
+    'password_reset_expires_at'
+  ),
+
+  lastPasswordChangedAt: timestamp(
+    'last_password_changed_at'
+  ),
+
+  createdAt: timestamp('created_at').defaultNow(),
+
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
 export const diaryEntries = pgTable(
   'diary_entries',
   {
@@ -199,6 +247,7 @@ export const diaryEntries = pgTable(
       .references(() => subtasks.id, { onDelete: 'set null' }),  
     entryDate: date('entry_date').notNull(),
     title: varchar('title', { length: 255 }),
+    createdBy: uuid('user_id').notNull().references(() => users.id, { onDelete: 'set null' }),
     notes: text('notes'),
     photos: jsonb('photos').$type<string[]>().default([]), // JSON stringified array of photo URLs
     videos: jsonb('videos').$type<string[]>().default([]), // JSON stringified array of video URLs
@@ -209,6 +258,7 @@ export const diaryEntries = pgTable(
   (table) => ({
     projectIdIdx: index('diary_entries_project_id_idx').on(table.projectId),
     entryDateIdx: index('diary_entries_date_idx').on(table.entryDate),
+    userIdx: index('user_id_idx').on(table.createdBy),
   })
 );
 

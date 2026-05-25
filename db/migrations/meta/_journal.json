@@ -43,6 +43,13 @@
       "when": 1779637672851,
       "tag": "0005_tidy_ultimo",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1779680644517,
+      "tag": "0006_amazing_golden_guardian",
+      "breakpoints": true
     }
   ]
 }

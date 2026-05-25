@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { usePathname } from 'next/navigation';
 import {Home, Calendar, BookOpen, Settings, Lock } from 'lucide-react';
 interface SideNavProps {
   children?: React.ReactNode;
@@ -9,7 +10,9 @@ interface SideNavProps {
 
 export function SideNav({ children }: SideNavProps) {
   const [isOpen, setIsOpen] = useState(true);
-
+  const pathname = usePathname();
+  // Hide sidenav on login page
+  const hideSideNav = pathname === '/';
   const toggleNav = () => setIsOpen(!isOpen);
 
   const navItems = [
@@ -22,6 +25,9 @@ export function SideNav({ children }: SideNavProps) {
 
   return (
     <div className="flex">
+      {!hideSideNav && (<>
+      
+     
       {/* Sidebar */}
       <div
          className={cn(
@@ -51,7 +57,7 @@ export function SideNav({ children }: SideNavProps) {
         </nav>
        <Lock size={20} className="absolute bottom-4 left-5 transform -translate-x-1/2 app-text-sage" />   
       </div>
-
+       </>)}    
       {/* Main content */}
       <div className={cn('flex-1 transition-all duration-300 p-3 w-[1300px]', isOpen ? 'ml-64' : 'ml-20')}>
         {children}

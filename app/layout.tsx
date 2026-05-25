@@ -13,12 +13,14 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  
   return (
     <html lang="en">
       <body className="bg-bg text-text font-sans">
         <SideNav>
           {children}
         </SideNav>
+         
          <Toaster
           position="top-right"
           richColors

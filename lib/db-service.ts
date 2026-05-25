@@ -1,7 +1,139 @@
 import { db } from '@/db';
-import { NewProject, projects, tasks, subtasks, diaryEntries, taskNotifications, teams, tasksAssignment,subtasksAssignment } from '@/db/schema';
+import { users, NewProject, projects, tasks, subtasks, diaryEntries, taskNotifications, teams, tasksAssignment,subtasksAssignment } from '@/db/schema';
 import { eq, desc, and, between, gte, lte } from 'drizzle-orm';
+import { hashPassword, verifyPassword } from '@/lib/auth/password';
+import { generateToken, generateRefreshToken } from '@/lib/auth/auth';
+import crypto from 'crypto';
 
+//User
+export async function createUser(data: {
+  fullName: string;
+  email: string;
+  password: string;
+}) {
+  const { passwordHash, passwordSalt } = await hashPassword(data.password);
+
+  const result = await db
+    .insert(users)
+    .values({
+      fullName: data.fullName,
+      email: data.email,
+      passwordHash,
+      passwordSalt,
+      mustChangePassword: true,
+    })
+    .returning();
+
+  return result[0];
+}
+
+export async function getUsers() {
+  return db.query.users.findMany();
+}
+export async function getUserById(id: string) {
+  return db.query.users.findFirst({
+     where: eq(users.id, id) 
+  });
+}
+
+export async function loginUser(
+  email: string,
+  password: string
+) {
+  const user = await db.query.users.findFirst({
+    where: eq(users.email, email),
+  });
+
+  if (!user) {
+    throw new Error('Invalid credentials');
+  }
+
+  const valid = await verifyPassword(
+    password,
+    user.passwordHash,
+    user.passwordSalt
+  );
+
+  if (!valid) {
+    throw new Error('Invalid credentials');
+  }
+
+  const token = generateToken({
+    userId: user.id,
+    email: user.email ?? '',
+    status: user.status,
+  });
+
+  const refreshToken = generateRefreshToken({
+  userId: user.id,
+  email: user.email!,
+});
+  return {
+    user: {
+      id: user.id,
+      fullName: user.fullName,
+      email: user.email,
+      status: user.status,
+    },
+    token,
+    refreshToken
+  };
+}
+
+export async function generatePasswordReset(
+  userId: string
+) {
+  const token = crypto.randomBytes(32).toString('hex');
+
+  const expires = new Date(
+    Date.now() + 1000 * 60 * 30
+  ); // 30 mins
+
+  await db
+    .update(users)
+    .set({
+      passwordResetToken: token,
+      passwordResetExpiresAt: expires,
+    })
+    .where(eq(users.id, userId));
+
+  return token;
+}
+
+export async function resetPassword(
+  token: string,
+  newPassword: string
+) {
+  const user = await db.query.users.findFirst({
+    where: eq(users.passwordResetToken, token),
+  });
+
+  if (!user) {
+    throw new Error('Invalid token');
+  }
+
+  if (
+    !user.passwordResetExpiresAt ||
+    user.passwordResetExpiresAt < new Date()
+  ) {
+    throw new Error('Token expired');
+  }
+
+  const { passwordHash, passwordSalt } =
+    await hashPassword(newPassword);
+
+  await db
+    .update(users)
+    .set({
+      passwordHash,
+      passwordSalt,
+      passwordResetToken: null,
+      passwordResetExpiresAt: null,
+      mustChangePassword: false,
+      lastPasswordChangedAt: new Date(),
+    })
+    .where(eq(users.id, user.id));
+}
 
 // Projects
 export async function getProjects() {
@@ -435,6 +567,7 @@ export async function getDiaryEntriesAll() {
 export async function createDiaryEntry(data: {
   projectId: string;
   taskId?: string;
+  userId?: string;
   subtaskId?: string;
   taskName?: string;
   date?: Date;
@@ -454,6 +587,7 @@ export async function createDiaryEntry(data: {
     taskId: data.taskId!,
     subtaskId: data.subtaskId!,
     entryDate: formattedDate,
+    createdBy: data.userId!,
     title: data.title,
     notes: data.notes,
     photos: data.photos || [],
@@ -467,6 +601,7 @@ export async function updateDiaryEntry(id: string, data: Partial<{
   projectId?: string;
   taskId?: string;
   subtaskId?: string;
+  createdBy?: string;
   entryDate?: Date;
   title?: string;
   notes?: string;
@@ -475,6 +610,7 @@ export async function updateDiaryEntry(id: string, data: Partial<{
   videos?: string[];
 }>) {
   const updateData: any = {};
+  if (data.createdBy !== undefined) updateData.createdBy = data.createdBy;
   if (data.projectId !== undefined) updateData.projectId = data.projectId;
   if (data.taskId !== undefined) updateData.taskId = data.taskId;
   if (data.entryDate !== undefined) updateData.entryDate = data.entryDate.toISOString();

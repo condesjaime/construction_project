@@ -40,14 +40,14 @@ export async function DELETE(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ date: Date; notes: string,photo: string[], taskId: string, projectId: string }> }
+  { params }: { params: Promise<{ date: Date; notes: string, photos: string[],videos: string[], taskId: string, projectId: string }> }
 ) {
 
     console.log('Received data:', await params);
   try {
-    const { date, notes, photo, taskId, projectId } = await params;
+    const { date, notes, photos, videos, taskId, projectId } = await params;
 
-    await createDiaryEntry({ projectId, date, notes, photo, taskId });
+    await createDiaryEntry({ projectId, date, notes, photos, videos, taskId });
 
     return NextResponse.json({ success: true });
   } catch (error) {

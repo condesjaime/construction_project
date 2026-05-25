@@ -9,12 +9,11 @@ import { DiaryEntryForm } from '@/components/DiaryEntryForm';
 import { formatDate, formatOffsetDate,formatShortId,parseOffsetDate } from '@/lib/utils';
 import Image from 'next/image';
 import { MapPin, User, Building2, Filter, Plus } from 'lucide-react';
-import { Edit2, Trash2, ChevronDown } from 'lucide-react';
-
+import { Edit2, Trash2, ChevronDown , Loader2} from 'lucide-react';
+import {fetchWithAuth} from '@/lib/auth/fetchwithAuth'
 type ProjectPageProps = {
   params: Promise<{ id: string }>;
 };
-
 interface DiaryEntry {
   id: string;
   entryDate: Date;
@@ -22,6 +21,30 @@ interface DiaryEntry {
   notes: string;
   mediaCount: number;
   updatedAt: Date;
+  project:{
+    id :string;
+    name: string;
+    description: string;
+    status: string;
+    startDate: string;
+    endDate: string;
+    client: string;
+    location: string;
+    color: string;
+    progress: string;
+    createdAt: string;
+    updatedAt: string; 
+  },
+  task:{
+    id: string;
+    name: string;
+  },
+  videos: {
+    key?: string;
+    url?: string;
+    type?: string;
+    name?: string;
+  }[]; 
   photos: {
     key?: string;
     url?: string;
@@ -30,17 +53,44 @@ interface DiaryEntry {
   }[]; // Assuming photos is an array of objects with url and type 
 }
 
+interface UploadedFile {
+  key?: string;
+  url?: string;
+  name?: string;
+  type?: string;
+}
+
 export default function ProjectPage({ params }: ProjectPageProps) {
   const { id } = use(params);
   const [activeTab, setActiveTab] = useState('schedule');
   const [showDiaryForm, setShowDiaryForm] = useState(false);
   const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
-  
-
+  const [editingEntry, setEditingEntry] = useState<DiaryEntry | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [selectedDeleteId, setSelectedDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [showForm, setShowForm]= useState(false);
    const [project, setProject] = useState<any>(null);
    const [tasks, setTasks] = useState<GanttTask[]>([]);
+   const [tasksData, setTasksData]= useState<any>(null);
    const [diaryEntries, setDiaryEntries] = useState<DiaryEntry[]>([]);
    const [rawtasks, setRawtasks]=useState<any>([]);
+   const [token, setToken] = useState<string | null>(null);
+   const [user, setUser] = useState<any>(null);
+   const [mounted, setMounted] = useState(false);
+     useEffect(() => {
+       setMounted(true);
+   
+       const storedToken = localStorage.getItem('token');
+       const storedUser = localStorage.getItem('user');
+   
+       setToken(storedToken);
+   
+       if (storedUser) {
+         setUser(JSON.parse(storedUser));
+       }
+     }, []);
+
   useEffect(() => {
     if(id){
        fetchProject(id);
@@ -61,14 +111,14 @@ export default function ProjectPage({ params }: ProjectPageProps) {
       name: data.name,
       description: data.description,
       client: data.client,
-      address: data.location,
       manager: data.manager,
       status: data.status,
       startDate: new Date(data.startDate),
       endDate: new Date(data.endDate),
       progress: data.progress,
       color: data.color,
-      
+      address: data.addressLine1 +" "+(data.city?data.city:'') +" "+ (data.state?data.state:'')+" "+(data.zipcode?data.zipcode:''),
+      address2: data.addressLine2 +" "+(data.city?data.city:'') +" "+ (data.state?data.state:'')+" "+(data.zipcode?data.zipcode:''),
     }
     setProject(formattedProject);
     console.log(formattedProject);
@@ -83,6 +133,7 @@ const fetchTasks = async (projectId: string) => {
 
     const data = await response.json();
     setRawtasks(data);
+    setTasksData(data);
     const formattedTasks: GanttTask[] = data.map((task: any) => ({
       id: task.id,
       projectId: task.projectId,
@@ -111,8 +162,20 @@ const fetchTasks = async (projectId: string) => {
 
   const fetchDiary = async (projectId: string) => {
     try {
-      const response = await fetch(`/api/diary?projectId=${projectId}`)
+      const response = await fetchWithAuth(`/api/diary?projectId=${projectId}`,{
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
       const data = await response.json();
+       if (response.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+
+      window.location.href = '/';
+      return;
+    }
       setDiaryEntries(data);
       console.log('Fetched diary entries:', data);
     } catch (error) {
@@ -144,19 +207,7 @@ const fetchTasks = async (projectId: string) => {
     return dt;
   };
 
-  // const [taskss, settasks] = useState<GanttTask[]>(() => [
-  //   { id: '1', projectId: project.id, projectName: project.name, projectColor: project.color, teamId: 't1', teamName: 'In-House Crew A', name: 'Site preparation', status: 'done', startDate: d(-14), endDate: d(-10), isMilestone: false },
-  //   { id: '2', projectId: project.id, projectName: project.name, projectColor: project.color, teamId: 't2', teamName: 'Demolition Co', name: 'Demolition', status: 'in_progress', startDate: d(-7), endDate: d(-3), isMilestone: false },
-  //   { id: '3', projectId: project.id, projectName: project.name, projectColor: project.color, teamId: 't3', teamName: 'Apex Framing', name: 'Framing', status: 'planned', startDate: d(0), endDate: d(11), isMilestone: false },
-  //   { id: '4', projectId: project.id, projectName: project.name, projectColor: project.color, teamId: 't4', teamName: 'Steel Bros', name: 'Steel reinforcement', status: 'planned', startDate: d(2), endDate: d(6), isMilestone: false },
-  //   { id: '5', projectId: project.id, projectName: project.name, projectColor: project.color, teamId: 't5', teamName: 'Sparky Electrical', name: 'Electrical rough-in', status: 'planned', startDate: d(7), endDate: d(18), isMilestone: false },
-  //   { id: '6', projectId: project.id, projectName: project.name, projectColor: project.color, teamId: 't6', teamName: 'Cascade Plumbing', name: 'Plumbing rough-in', status: 'planned', startDate: d(9), endDate: d(18), isMilestone: false },
-  //   { id: '7', projectId: project.id, projectName: project.name, projectColor: project.color, teamId: 't7', teamName: 'Council Inspector', name: 'Services inspection', status: 'milestone', startDate: d(21), endDate: d(21), isMilestone: true },
-  //   { id: '8', projectId: project.id, projectName: project.name, projectColor: project.color, teamId: 't8', teamName: 'In-House Crew B', name: 'Drywall', status: 'planned', startDate: d(14), endDate: d(25), isMilestone: false },
-  //   { id: '9', projectId: project.id, projectName: project.name, projectColor: project.color, teamId: 't9', teamName: 'ProFinish Painting', name: 'Painting', status: 'planned', startDate: d(21), endDate: d(29), isMilestone: false, teams: ['ProFinish Painting', 'Apprentice Crew'] } as GanttTask,
-  //   { id: '10', projectId: project.id, projectName: project.name, projectColor: project.color, teamId: 't10', teamName: 'Joinery Plus', name: 'Carpentry & joinery', status: 'planned', startDate: d(24), endDate: d(31), isMilestone: false },
-  //   { id: '11', projectId: project.id, projectName: project.name, projectColor: project.color, teamId: 't11', teamName: 'Project Team', name: 'Handover', status: 'milestone', startDate: d(33), endDate: d(33), isMilestone: true },
-  // ]);
+ 
 
   const groupedTasks = useMemo(
   () => ({
@@ -203,35 +254,85 @@ const milestoneCount = useMemo(
   () => tasks.filter((t) => t.isMilestone).length,
   [tasks]
 );
-  const saveDiaryEntry = async (entry: { date: Date; notes: string; taskId: string, photos: string[] }) => {
-    // Here you would normally send the entry to your backend to be saved in the database
-    console.log('Saving diary entry:', entry);
-    try{
-      //save to db
-      const response= await fetch('/api/diary', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          projectId: project.id,
-          date: entry.date.toISOString(),
-          title: `Entry for ${formatDate(entry.date, 'dd MMM yyyy')}`,
-          notes: entry.notes,
-          taskId: entry.taskId,
-          photos: entry.photos
-        }),
-      });
-
-      if(response.ok){
-        fetchDiary(project.id); // Refresh the diary entries after saving
+  const saveDiaryEntry = async (
+    entry: {
+      projectId: string;
+      date: Date;
+      notes: string;
+      taskId: string;
+      photos: string[];
+      videos: string[];
+    }
+  ) => {
+    try {
+      const isEdit = !!editingEntry;
+  
+      const response = await fetchWithAuth(
+        isEdit
+          ? `/api/diary/${editingEntry.id}`
+          : '/api/diary',
+        {
+          method: isEdit ? 'PUT' : 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            projectId: entry.projectId,
+            date: entry.date.toISOString(),
+            title: `Entry for ${formatDate(
+              entry.date,
+              'dd MMM yyyy'
+            )}`,
+            notes: entry.notes,
+            taskId: entry.taskId,
+            photos: entry.photos,
+            videos: entry.videos,
+          }),
+        }
+      );
+  
+      if (response.ok) {
+        fetchDiary(id);
+        setShowForm(false);
+        setEditingEntry(null);
       }
-    }catch(error){
+    } catch (error) {
       console.error('Error saving diary entry:', error);
     }
-    setShowDiaryForm(false);
-
-  }
+  };
+  const handleEditEntry = (entry: DiaryEntry) => {
+    setEditingEntry(entry);
+    setShowForm(true);
+  };
+    const handleDeleteEntry = async () => {
+    if (!selectedDeleteId) return;
+  
+    try {
+      setDeleting(true);
+  
+      const response = await fetchWithAuth(
+        `/api/diary/${selectedDeleteId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+  
+      if (response.ok) {
+        await fetchDiary(id);
+  
+        setDeleteModalOpen(false);
+        setSelectedDeleteId(null);
+      }
+    } catch (error) {
+      console.error('Delete failed:', error);
+    } finally {
+      setDeleting(false);
+    }
+  };
  const groupedEntries = diaryEntries.reduce(
     (acc, entry) => {
       const dateKey = formatDate(entry.entryDate, 'yyyy-MM');
@@ -247,9 +348,7 @@ const milestoneCount = useMemo(
     {} as Record<string, { label: string; entries: DiaryEntry[] }>
   );
 
-  const handleDeleteEntry = (id: string) => {
-    setDiaryEntries(diaryEntries.filter((e) => e.id !== id));
-  };
+ 
 
   if (!project) {
   return (
@@ -280,10 +379,7 @@ const milestoneCount = useMemo(
               <MapPin />
               {project.address}
             </span>
-            <span className="meta-chip">
-              <User />
-              {project.manager}
-            </span>
+            
           </div>
           <div className="project-stats-row">
             <span className="status-pill">
@@ -346,11 +442,39 @@ const milestoneCount = useMemo(
                 </Button>
             {showDiaryForm ? (
               <DiaryEntryForm
-                pageName='project'
-                tasksData={rawtasks}
-                onSubmit={saveDiaryEntry}
-                onCancel={() => setShowDiaryForm(false)}
-              />
+                          pageName="project"
+                          onSubmit={saveDiaryEntry}
+                          tasksData={tasksData}
+                          project={project}
+                          onCancel={() => {
+                            setShowForm(false);
+                            setEditingEntry(null);
+                          }}
+                          projectId={editingEntry?.project?.id}
+                          taskId={editingEntry?.task?.id}
+                          notes={editingEntry?.notes}
+                          photos={
+                            editingEntry?.photos?.map((photo) => ({
+                              key: photo.key,
+                              url: photo.url ?? '',
+                              name: photo.name ?? '',
+                              type: photo.type ?? '',
+                            })) ?? []
+                          }
+                          videos={
+                            editingEntry?.videos?.map((video) => ({
+                              key: video.key,
+                              url: video.url ?? '',
+                              name: video.name ?? '',
+                              type: video.type ?? '',
+                            })) ?? []
+                          }
+                          entryDate={
+                            editingEntry?.entryDate
+                              ? new Date(editingEntry.entryDate).toISOString()
+                              : undefined
+                          }
+                        />
             ) : (
               <div className="text-center py-12 px-6">
                 {Object.entries(groupedEntries).map(([key, group]) => (
@@ -451,7 +575,7 @@ const milestoneCount = useMemo(
                                 Edit
                               </button>
                               <button
-                                onClick={() => handleDeleteEntry(entry.id)}
+                                onClick={() => handleDeleteEntry()}
                                 className="flex-1 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center gap-2"
                               >
                                 <Trash2 size={14} />
@@ -497,6 +621,62 @@ const milestoneCount = useMemo(
           </TabsContent>
         </div>
       </Tabs>
+
+    {deleteModalOpen && (
+  <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+      
+      {/* Header */}
+      <div className="p-6 border-b border-gray-100">
+        <div className="flex items-center justify-center w-14 h-14 rounded-full bg-red-100 mx-auto mb-4">
+          <Trash2 className="text-red-600" size={28} />
+        </div>
+
+        <h2 className="text-xl font-semibold text-center text-gray-900">
+          Delete Diary Entry
+        </h2>
+
+        <p className="text-sm text-gray-500 text-center mt-2">
+          This action cannot be undone. This will permanently remove the diary entry and its media references.
+        </p>
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-3 p-6">
+        <button
+          type="button"
+          onClick={() => {
+            setDeleteModalOpen(false);
+            setSelectedDeleteId(null);
+          }}
+          disabled={deleting}
+          className="flex-1 px-4 py-3 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="button"
+          onClick={handleDeleteEntry}
+          disabled={deleting}
+          className="flex-1 px-4 py-3 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          {deleting ? (
+            <>
+              <Loader2 size={16} className="animate-spin" />
+              Deleting...
+            </>
+          ) : (
+            <>
+              <Trash2 size={16} />
+              Delete
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  </div>
+)}  
     </div>
   );
 }

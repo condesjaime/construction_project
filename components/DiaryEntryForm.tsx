@@ -12,6 +12,39 @@ interface DiaryEntryFormProps {
   projectId?: string;
   taskId?: string;
   subtaskId?:string;
+  photos?: UploadedFile[];
+  videos?: UploadedFile[];
+  notes?: string;
+  entryDate?: string;
+  initialData?: {
+    id?: string;
+    projectId?: string;
+    taskId?: string;
+    subtaskId?: string;
+    date?: string | Date;
+    notes?: string;
+
+    photos?: UploadedFile[];
+    videos?: UploadedFile[];
+  };
+  project?:{
+    id: string;
+      name?: string;
+      description?: string;
+      status?: string;
+      startDate?: string;
+      endDate?: string;
+      client?: string;
+      addressLine1?: string;
+      addressLine2?: string;
+      city?: string;
+      state?: string;
+      zipCode?: string;
+      color: string;
+      progress: string;
+      createdAt: string;
+      updatedAt: string;
+  }
   projectData?: {
       id: string;
       name?: string;
@@ -44,6 +77,7 @@ interface DiaryEntryFormProps {
     sortOrder: number;
     createdAt:  string;
     updatedAt:  string;
+    
     project?: {
       id: string;
       name?: string;
@@ -75,6 +109,7 @@ interface DiaryEntryFormProps {
   }[];
 }
 interface UploadedFile {
+  key?: string;
   url: string;
   name: string;
   type: string;
@@ -89,15 +124,33 @@ export function DiaryEntryForm({
   subtaskId,
   tasksData,
   projectData,
+  project,
+  photos,
+  videos,
+  notes,
+  entryDate,
+  initialData,
 }: DiaryEntryFormProps) {
   const [formData, setFormData] = useState({
-    projectId: projectId || '',
-    taskId: taskId || '',
-    subtaskId: subtaskId || '',
-    date: formatDate(new Date(), 'yyyy-MM-dd'),
-    notes: '',
-    photos: [] as UploadedFile[],
-  });
+  projectId:
+    initialData?.projectId || projectId || '',
+
+  taskId:
+    initialData?.taskId || taskId || '',
+
+  subtaskId:
+    initialData?.subtaskId || subtaskId || '',
+
+  date: initialData?.date
+    ? formatDate(new Date(initialData.date), 'yyyy-MM-dd')
+    : formatDate(new Date(), 'yyyy-MM-dd'),
+
+  notes: initialData?.notes || '',
+
+  photos: initialData?.photos || [],
+
+  videos: initialData?.videos || [],
+});
 
   const [uploading, setUploading] = useState(false);
   const [taskOptions, setTaskOptions] = useState<
@@ -108,11 +161,29 @@ export function DiaryEntryForm({
   }[]
 >([]);
  const [selectedMedia, setSelectedMedia] = useState<UploadedFile | null>(null);
-  const mockTasks = [
-    { id: '1', name: 'Structural Demolition' },
-    { id: '2', name: 'Electrical Rough-In' },
-    { id: '3', name: 'Plumbing Installation' },
-  ];
+ 
+useEffect(() => {
+  setFormData((prev) => ({
+    ...prev,
+    projectId: projectId || '',
+    taskId: taskId || '',
+    subtaskId: subtaskId || '',
+    notes: notes || '',
+    photos: photos || [],
+    videos: videos || [],
+    date: entryDate
+      ? formatDate(new Date(entryDate), 'yyyy-MM-dd')
+      : formatDate(new Date(), 'yyyy-MM-dd'),
+  }));
+}, [
+  projectId,
+  taskId,
+  subtaskId,
+  notes,
+  photos,
+  videos,
+  entryDate,
+]);
 
 useEffect(() => {
   if (!formData.projectId || !tasksData) {
@@ -157,11 +228,20 @@ useEffect(() => {
       body: uploadData,
     });
 
-    const data = await response.json();
+     const data = await response.json();
+    
+    const uploadedPhotos = data.files.filter((file: UploadedFile) =>
+      file.type?.startsWith('image/')
+    );
+
+    const uploadedVideos = data.files.filter((file: UploadedFile) =>
+      file.type?.startsWith('video/')
+    );
 
     setFormData((prev) => ({
       ...prev,
-      photos: [...prev.photos, ...data.files],
+      photos: [...prev.photos, ...uploadedPhotos],
+      videos: [...(prev.videos || []), ...uploadedVideos],
     }));
   } catch (error) {
     console.error(error);
@@ -173,7 +253,14 @@ useEffect(() => {
   const removePhoto = (index: number) => {
     setFormData((prev) => ({
       ...prev,
-      photos: prev.photos.filter((_, i) => i !== index),
+      photos: prev.photos.filter((_, i) => i !== index)
+    }));
+  };
+
+   const removeVideo = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      videos: prev.videos.filter((_, i) => i !== index),
     }));
   };
 
@@ -245,6 +332,9 @@ useEffect(() => {
           </select>
          </>)}
           
+          {pageName==="project" && (<>
+            <h1>{project?.name}</h1>
+          </>)}
         </div>
 
         {/* Task */}
@@ -329,66 +419,93 @@ useEffect(() => {
             </div>
           )}
 
-          {/* Preview uploaded files */}
-          {formData.photos.length > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-4">
-            {formData.photos.map((photo, index) => {
-              const isImage = photo.type.startsWith('image');
-              const isVideo = photo.type.startsWith('video');
+         <div className="flex flex-wrap gap-3 justify-start">
+            {/* Photos */}
+            {formData.photos.length > 0 &&
+              formData.photos.map((photo, index) => {
+                const isImage = photo.type.startsWith('image');
 
-              return (
-                <div
-                  key={index}
-                  onClick={() => setSelectedMedia(photo)}
-                  className="relative border border-border rounded-lg overflow-hidden bg-black cursor-pointer group"
-                >
-                  {isImage && (
-                    <div className="relative h-32 w-full">
-                      <Image
-                        src={photo.url}
-                        alt={photo.name}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                  )}
-
-                  {isVideo && (
-                    <>
-                      <video
-                        src={photo.url}
-                        className="h-32 w-full object-cover"
-                        muted
-                        preload="metadata"
-                      />
-
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                        <div className="bg-white/90 rounded-full p-3">
-                          ▶
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs px-2 py-1 truncate">
-                    {photo.name}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removePhoto(index);
-                    }}
-                    className="absolute top-2 right-2 bg-black/70 text-white rounded-full p-1 z-10"
+                return (
+                  <div
+                    key={`photo-${index}`}
+                    onClick={() => setSelectedMedia(photo)}
+                    className="relative border border-border rounded-lg overflow-hidden bg-black cursor-pointer group w-40 shrink-0"
                   >
-                    <X size={14} />
-                  </button>
-                </div>
-              );
-            })}
+                    {isImage && (
+                      <div className="relative h-32 w-full">
+                        <Image
+                          src={photo.url}
+                          alt={photo.name}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                    )}
+
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs px-2 py-1 truncate">
+                      {photo.name}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removePhoto(index);
+                      }}
+                      className="absolute top-2 right-2 bg-black/70 text-white rounded-full p-1 z-10"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                );
+              })}
+
+            {/* Videos */}
+            {formData.videos.length > 0 &&
+              formData.videos.map((video, index) => {
+                const isVideo = video.type.startsWith('video');
+
+                return (
+                  <div
+                    key={`video-${index}`}
+                    onClick={() => setSelectedMedia(video)}
+                    className="relative border border-border rounded-lg overflow-hidden bg-black cursor-pointer group w-40 shrink-0"
+                  >
+                    {isVideo && (
+                      <>
+                        <video
+                          src={video.url}
+                          className="h-32 w-full object-cover"
+                          muted
+                          preload="metadata"
+                        />
+
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                          <div className="bg-white/90 rounded-full p-3 text-black">
+                            ▶
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs px-2 py-1 truncate">
+                      {video.name}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeVideo(index);
+                      }}
+                      className="absolute top-2 right-2 bg-black/70 text-white rounded-full p-1 z-10"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                );
+              })}
           </div>
-        )}
         </div>
 
         {/* Actions */}
