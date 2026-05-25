@@ -16,6 +16,11 @@ interface DiaryEntry {
   notes: string;
   mediaCount: number;
   updatedAt: Date;
+  users?:{
+    id: string;
+    fullName: string;
+    email: string;
+  }
   project:{
     id :string;
     name: string;
@@ -62,13 +67,15 @@ export default function DiaryPage() {
   const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
   const [projects, setProjects] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
-  const [token, setToken] = useState<string | null>(null);
-  const [user, setUser] = useState<any>(null);
-const [mounted, setMounted] = useState(false);
+ 
 const [editingEntry, setEditingEntry] = useState<DiaryEntry | null>(null);
 const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 const [selectedDeleteId, setSelectedDeleteId] = useState<string | null>(null);
 const [deleting, setDeleting] = useState(false);
+
+const [token, setToken] = useState<string | null>(null);
+const [user, setUser] = useState<any>(null);
+const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
 
@@ -341,7 +348,7 @@ if (!mounted) {
                           }
                           className="w-full p-4 flex items-start justify-between text-left hover:bg-surface-alt transition-colors"
                         >
-                          <div className="flex-1">
+                          <div className="w-[50%]">
                             <div className="flex items-start gap-4">
                               <div>
                                 <div className="font-semibold text-text">
@@ -358,26 +365,37 @@ if (!mounted) {
                                    <Calendar size={18} /> Task: {entry.task.name}
                                    </span>
                                   </div>
-                                  <div className="flex items-center gap-3">
-                                  <div className="flex-1 h-2 bg-surface-alt border border-border rounded-full overflow-hidden">
-                                    <div
-                                      className={`h-full app-bg-lime`}
-                                      style={{ width: `${entry.project.progress}%` }}
-                                    />
-                                  </div>
-                                  <span className="text-sm font-mono text-text-muted min-w-12 text-right">
-                                    {entry.project.progress}%
-                                  </span>
                                 </div>
-                                 <div></div>
-                                </div>
+                                
                               </div>
                             </div>
+                            <div className='flex w-full justify-between items-center'>
+                                  <div className='w-full'>
+                                        <div className="flex items-center gap-3">
+                                          <div className="flex-1 h-2 bg-surface-alt border border-border rounded-full overflow-hidden">
+                                            <div
+                                              className={`h-full app-bg-lime`}
+                                              style={{ width: `${entry.project.progress}%` }}
+                                            />
+                                          </div>
+                                          <span className="text-sm font-mono text-text-muted min-w-12 text-right">
+                                            {entry.project.progress}%
+                                          </span>
+                                        </div>
+                                  </div>
+                                    
+                                 </div>
                           </div>
+
+                          
                           <div className="flex items-center gap-2 ml-4">
+                           
+                                <span className='text-xs px-3 py-1 rounded-full bg-red-100'>By: {entry.users?.fullName}</span>
+                                
+                            
                             {entry.photos.length > 0 && (
                               <div className="text-xs bg-gray-200 px-2 py-1 rounded-full text-text-muted">
-                               <span className='app-text-green'>{entry.photos.length} photo{entry.photos.length > 1 ? 's' : ''}</span> 
+                               <span className='app-text-green w-[50px]'>{entry.photos.length} photo{entry.photos.length > 1 ? 's' : ''}</span> 
                               </div>
                             )}
                             {entry.videos.length > 0 && (
@@ -391,7 +409,9 @@ if (!mounted) {
                                 expandedEntry === entry.id ? 'rotate-180' : ''
                               }`}
                             />
+                            
                           </div>
+                          
                         </button>
 
                         {/* Expanded content */}
@@ -406,7 +426,7 @@ if (!mounted) {
                             
                            </div>
                            
-                            <div className="flex flex-wrap gap-3 justify-start mt-2">
+                            <div className="flex flex-wrap gap-2 justify-start mt-2">
                                         {/* Photos */}
                                         {entry.photos.length > 0 &&
                                           entry.photos.map((photo, index) => {

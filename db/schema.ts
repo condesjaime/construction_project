@@ -334,6 +334,10 @@ export const diaryEntriesRelations = relations(
       fields: [diaryEntries.taskId],
       references: [tasks.id],
     }),
+    users: one(users, {
+      fields: [diaryEntries.createdBy],
+      references: [users.id],
+    }),
   })
 );
 
@@ -353,6 +357,9 @@ export const taskNotificationsRelations = relations(
   })
 );
 
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
+
 export type Project = typeof projects.$inferSelect;
 export type NewProject = typeof projects.$inferInsert;
 
@@ -367,8 +374,6 @@ export type NewSubtask = typeof subtasks.$inferInsert;
 
 export type DiaryEntry = typeof diaryEntries.$inferSelect;
 export type NewDiaryEntry = typeof diaryEntries.$inferInsert;
-
-
 
 export type TaskNotification = typeof taskNotifications.$inferSelect;
 export type NewTaskNotification = typeof taskNotifications.$inferInsert;

@@ -548,7 +548,8 @@ export async function getDiaryEntries(projectId: string) {
     where: eq(diaryEntries.projectId, projectId),
     with: {
       project: true,
-      task: true
+      task: true,
+      users: true
     },
     orderBy: desc(diaryEntries.entryDate),
   });
@@ -559,6 +560,7 @@ export async function getDiaryEntriesAll() {
     with: {
       project: true,
       task: true,
+      users: true
     },
     orderBy: desc(diaryEntries.entryDate),
   });

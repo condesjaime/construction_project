@@ -419,7 +419,7 @@ useEffect(() => {
             </div>
           )}
 
-         <div className="flex flex-wrap gap-3 justify-start">
+         <div className="flex flex-wrap gap-2 justify-start">
             {/* Photos */}
             {formData.photos.length > 0 &&
               formData.photos.map((photo, index) => {
