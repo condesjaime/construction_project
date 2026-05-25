@@ -109,7 +109,20 @@ export default function Dashboard() {
               color="green"
             />
           </div>
-
+          {/* Quick actions */}
+          <div className="flex gap-4">
+            <button 
+            onClick={() => setOpen(true)}
+            className="px-6 py-3 app-bg-lime app-text-green rounded-lg font-medium  transition-colors">
+              + New Project
+            </button>
+            <a
+              href="/schedule"
+              className="px-6 py-3 bg-surface border border-border text-text rounded-lg font-medium hover:bg-surface-alt transition-colors"
+            >
+              View Full Schedule
+            </a>
+          </div>
           {/* Projects List */}
           {!projects.length && (<>
             <p className="text-text-muted">No projects found.</p>
@@ -167,20 +180,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Quick actions */}
-          <div className="flex gap-4">
-            <button 
-            onClick={() => setOpen(true)}
-            className="px-6 py-3 app-bg-lime app-text-green rounded-lg font-medium  transition-colors">
-              + New Project
-            </button>
-            <a
-              href="/schedule"
-              className="px-6 py-3 bg-surface border border-border text-text rounded-lg font-medium hover:bg-surface-alt transition-colors"
-            >
-              View Full Schedule
-            </a>
-          </div>
+          
         </div>
       </div>
     </div>

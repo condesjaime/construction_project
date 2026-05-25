@@ -20,7 +20,11 @@ export default function ProjectCreateModal({
     name: '',
     description: '',
     client: '',
-    location: '',
+    addressLine1: '',
+    addressLine2: '',
+    city: '',
+    state: '',
+    zipCode:'',
     startDate: '',
     endDate: '',
     color: 'p1',
@@ -67,7 +71,11 @@ export default function ProjectCreateModal({
       name: '',
       description: '',
       client: '',
-      location: '',
+      addressLine1: '',
+      addressLine2:'',
+      city:'',
+      state:'',
+      zipCode:'',
       startDate: '',
       endDate: '',
       color: 'p1',
@@ -126,7 +134,7 @@ export default function ProjectCreateModal({
           </div>
 
           {/* Client + Location */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <input
               name="client"
               placeholder="Client"
@@ -135,9 +143,40 @@ export default function ProjectCreateModal({
               className="p-2 border rounded-lg"
             />
             <input
-              name="location"
-              placeholder="Location"
-              value={form.location}
+              name="addressLine1"
+              placeholder="address line 1"
+              value={form.addressLine1}
+              onChange={handleChange}
+              className="p-2 border rounded-lg"
+            />
+            <input
+              name="addressLine2"
+              placeholder="address line 2"
+              value={form.addressLine2}
+              onChange={handleChange}
+              className="p-2 border rounded-lg"
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+           
+            <input
+              name="city"
+              placeholder="city"
+              value={form.city}
+              onChange={handleChange}
+              className="p-2 border rounded-lg"
+            />
+            <input
+              name="state"
+              placeholder="state"
+              value={form.state}
+              onChange={handleChange}
+              className="p-2 border rounded-lg"
+            />
+            <input
+              name="zipCode"
+              placeholder="zipcode"
+              value={form.zipCode}
               onChange={handleChange}
               className="p-2 border rounded-lg"
             />
