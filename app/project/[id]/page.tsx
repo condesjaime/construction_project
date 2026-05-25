@@ -388,7 +388,7 @@ const dayOfProject = project
 const dayOfClamped = Math.min(dayOfProject, totalDays);
 
 const teamCount = useMemo(
-  () => new Set(groupedTasks.all.tasks?.map((t) => t.teamId)).size,
+  () => new Set(groupedTasks.all.tasks?.map((t) => t.teams)).size,
   [groupedTasks]
 );
 
@@ -510,9 +510,6 @@ const updateTask = async(taskId: string, updatedData: any) => {
     } catch (error) {
         toast.error('Failed to update task');
         console.error('Error updating task:', error);
-    }finally{
-      fetchTasks(project.id);
-      fetchSubTasks(project.id);
     }
   };
 
@@ -534,9 +531,6 @@ const updateTask = async(taskId: string, updatedData: any) => {
     } catch (error) {
         toast.error('Failed to update sub-task');
         console.error('Error updating sub-task:', error);
-    }finally{
-      fetchTasks(project.id);
-      fetchSubTasks(project.id);
     }
   };
 
@@ -554,6 +548,8 @@ const updateTask = async(taskId: string, updatedData: any) => {
      }else{
       updateTask(taskId, { startDate: formatDate(newStart,'yyyy-MM-dd'), endDate: formatDate(newEnd,'yyyy-MM-dd') });
      }
+     fetchTasks(project.id);
+     fetchSubTasks(project.id);
      
    };
 
