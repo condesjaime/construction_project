@@ -119,7 +119,7 @@ export default function ProjectPage({ params }: ProjectPageProps) {
    const [selectedMedia, setSelectedMedia]=useState<any>(null);
   const [selectedTask, setSelectedTask] = useState<TaskData | null>(null);
   const [selectedSubTask, setSelectedSubTask] = useState<TaskData | null>(null);
-  const [mockTasks, setMockTasks] = useState<TaskData[]>([]);
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createSubtaskModalOpen, setCreateSubtaskModalOpen] = useState(false);
@@ -192,8 +192,7 @@ const fetchTasks = async (projectId: string) => {
     const response = await fetch(`/api/task-assignment?projectId=${projectId}`);
 
     const data = await response.json();
-    
-
+   
     const formattedTasks: GanttTask[] = data.map((task: any) => {
       // get only teams connected to the current task
       const teams = data
@@ -236,10 +235,7 @@ const fetchTasks = async (projectId: string) => {
         teams,
       };
     });
-    setTasks((prev) => [
-    ...prev,
-      ...formattedTasks,
-    ]);
+    setTasks(formattedTasks);
     console.log(formattedTasks);
   } catch (error) {
     console.error('Error fetching tasks:', error);
@@ -298,10 +294,6 @@ const fetchSubTasks = async (projectId: string) => {
 });
 
     setSubTasks(formattedTasks);
-    setTasks((prev) => [
-    ...prev,
-      ...formattedTasks,
-    ]);
     console.log(formattedTasks);
   } catch (error) {
     console.error('Error fetching tasks:', error);
@@ -345,7 +337,9 @@ const fetchSubTasks = async (projectId: string) => {
  const groupedTasks = useMemo(() => {
   const uniqueMap = new Map();
 
-  tasks.forEach((task: any) => {
+  const combinedTasks = [...tasks, ...subtasks];
+
+  combinedTasks.forEach((task: any) => {
     const key = task.taskId || task.id;
 
     if (!uniqueMap.has(key)) {
@@ -360,7 +354,7 @@ const fetchSubTasks = async (projectId: string) => {
       tasks: Array.from(uniqueMap.values()),
     },
   };
-}, [project, tasks]);
+}, [project, tasks, subtasks]);
 
   // ===== Day-of/Day-X metrics for the project pill =====
   const totalDays = project
@@ -539,19 +533,67 @@ const updateTask = async(taskId: string, updatedData: any) => {
      setIsModalOpen(true);
    };
  
-   const handleReschedule = (taskId: string, newStart: Date, newEnd: Date, isSubtask?: boolean) => {
-     setMockTasks((prev) =>
-       prev.map((t) => (t.id === taskId ? { ...t, startDate: newStart, endDate: newEnd } : t))
-     );
-     if(isSubtask){
-      updateSubTask(taskId, { startDate: formatDate(newStart,'yyyy-MM-dd'), endDate: formatDate(newEnd,'yyyy-MM-dd') });
-     }else{
-      updateTask(taskId, { startDate: formatDate(newStart,'yyyy-MM-dd'), endDate: formatDate(newEnd,'yyyy-MM-dd') });
-     }
-     fetchTasks(project.id);
-     fetchSubTasks(project.id);
-     
-   };
+   const handleReschedule = async (
+  taskId: string,
+  newStart: Date,
+  newEnd: Date,
+  isSubtask?: boolean
+) => {
+
+  // Optimistic UI update
+  if (isSubtask) {
+    setSubTasks((prev) =>
+      prev.map((t) =>
+        t.id === taskId
+          ? {
+              ...t,
+              startDate: newStart,
+              endDate: newEnd,
+            }
+          : t
+      )
+    );
+  } else {
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === taskId
+          ? {
+              ...t,
+              startDate: newStart,
+              endDate: newEnd,
+            }
+          : t
+      )
+    );
+  }
+
+  try {
+    if (isSubtask) {
+      await updateSubTask(taskId, {
+        startDate: formatDate(newStart, 'yyyy-MM-dd'),
+        endDate: formatDate(newEnd, 'yyyy-MM-dd'),
+      });
+    } else {
+      await updateTask(taskId, {
+        startDate: formatDate(newStart, 'yyyy-MM-dd'),
+        endDate: formatDate(newEnd, 'yyyy-MM-dd'),
+      });
+    }
+
+    // Refresh from server
+    await Promise.all([
+      fetchTasks(project.id),
+      fetchSubTasks(project.id),
+    ]);
+
+  } catch (error) {
+    console.error(error);
+
+    // rollback if needed
+    fetchTasks(project.id);
+    fetchSubTasks(project.id);
+  }
+};
 
   if (!project) {
   return (
@@ -1022,10 +1064,17 @@ const updateTask = async(taskId: string, updatedData: any) => {
           task={selectedTask}
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          onTaskUpdate={(taskId, updates) => {
-            setMockTasks((prev) =>
+          onTaskUpdate={(taskId, updates, isSubtask) => {
+            if(isSubtask){
+               setSubTasks((prev) =>
               prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t))
             );
+            }else{
+               setTasks((prev) =>
+              prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t))
+            );
+            }
+           
           }}
         />
       )}

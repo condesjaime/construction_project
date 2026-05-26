@@ -19,13 +19,15 @@ interface TaskData {
   estimatedDays?: number;
   notes?: string;
   isMilestone: boolean;
+  isSubtask?:boolean;
+  parentTaskId?: string;
 }
 
 interface EnhancedTaskModalProps {
   task: TaskData;
   isOpen: boolean;
   onClose: () => void;
-  onTaskUpdate?: (taskId: string, updates: Partial<TaskData>) => void;
+  onTaskUpdate?: (taskId: string, updates: Partial<TaskData>, isSubtask?: boolean) => void;
 }
 
 export function EnhancedTaskModal({
@@ -62,7 +64,7 @@ export function EnhancedTaskModal({
     }
     setEditedTask(newTask);
     if (onTaskUpdate) {
-      onTaskUpdate(task.id, newTask);
+      onTaskUpdate(task.id, newTask, newTask.isSubtask);
     }
   };
 
