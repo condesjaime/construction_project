@@ -140,6 +140,10 @@ export async function getProjects() {
   return db.query.projects.findMany({
     with: {
       tasks: true,
+      taskassignment: true,
+      team: true,
+      subtasks: true,
+
     },
   });
 }
@@ -393,23 +397,34 @@ export async function getTasks(filters?: {
   status?: 'planned' | 'in_progress' | 'done' | 'milestone' | 'blocked';
 }) {
   const conditions = [];
-  
+
   if (filters?.projectId) {
     conditions.push(eq(tasks.projectId, filters.projectId));
   }
- 
-  
+
+  if (filters?.status) {
+    conditions.push(eq(tasks.status, filters.status));
+  }
+
   return db.query.tasks.findMany({
-    where: conditions.length > 0 ? and(...conditions) : undefined,
+    where: conditions.length > 0
+      ? and(...conditions)
+      : undefined,
+
     with: {
       project: true,
-      team_assignment: {
+      taskassignment: {
         with: {
           team: true,
         },
       },
-      subtasks: true,
-     
+      subtaskassignment: {
+        with: {
+          team: true,
+        },
+      },
+      subtasks:true,
+      
     },
   });
 }
