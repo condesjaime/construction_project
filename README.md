@@ -44,3 +44,5 @@ make the uploads bucket public run: docker exec -it minio mc anonymous set publi
 6. run -> npx drizzle-kit migrate or npx drizzle-kit push 
 7. run -> npx tsx db/seed.ts ->perform seeding data to database adding
 8. run -> npm run dev -> this will start the next.js app
+
+create your own account using create account - this is to make sure there will be a user that who created the diary should be log.
